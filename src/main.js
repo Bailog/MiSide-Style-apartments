@@ -12,6 +12,7 @@ import { buildEffects } from './world/effects.js';
 import { Collision } from './collision.js';
 import { Player } from './player.js';
 import { PostFX } from './post.js';
+import { initLang, setLang, getLang, t, applyTexts, renderDev } from './i18n.js';
 
 const params = new URLSearchParams(location.search);
 const QUALITY = ['low', 'medium', 'high'];
@@ -55,11 +56,12 @@ const collision = new Collision();
 const A = C.ARCH;
 collision.addPolyline([
   [C.LIVING.x0, C.LIVING.z0], C.DIAGONAL.a, C.DIAGONAL.b, [C.HALL.x0, 0], [C.PILLAR.x1, 0],
-  [A.x0, A.corridorEnd], [A.x1, A.corridorEnd], [C.HALL.x1, C.HALL.z1], [C.LIVING.x1, C.HALL.z1],
-  [C.LIVING.x1, C.LIVING.z1], [C.LIVING.x0, C.LIVING.z1],
+  [A.x0, A.corridorEnd], [A.x1, A.corridorEnd], [A.x1, A.wallZ], [C.HALL.x1, A.wallZ],
+  [C.HALL.x1, C.HALL.z1], [C.LIVING.x1, C.HALL.z1], [C.LIVING.x1, C.LIVING.z1], [C.LIVING.x0, C.LIVING.z1],
 ]);
 collision.add({ type: 'box', x0: C.PILLAR.x0, z0: 0, x1: C.PILLAR.x1, z1: C.PILLAR.z1 });
-collision.add({ type: 'box', x0: 0, z0: 4.1, x1: 0.32, z1: 5.6 });   // window sill
+const Wn = C.OPENINGS.window;
+collision.add({ type: 'box', x0: -0.5, z0: Wn.z0, x1: 0.05, z1: Wn.z1 });   // window niche with the sill
 colliders.forEach((c) => collision.add(c));
 
 // --- player --------------------------------------------------------------
@@ -93,7 +95,6 @@ function applyQuality(q, { byUser = false } = {}) {
   }
 }
 
-const QUALITY_NAMES = { low: 'низкое', medium: 'среднее', high: 'высокое' };
 const toast = document.getElementById('toast');
 let toastTimer = 0;
 function showToast(text) {
@@ -115,7 +116,7 @@ function probeQuality(dt) {
   probe.t = 0; probe.frames = 0;
   if (fps < 28) {
     applyQuality(QUALITY[QUALITY.indexOf(quality) - 1]);
-    showToast(`Качество: ${QUALITY_NAMES[quality]} (G — изменить)`);
+    showToast(t('qualityAuto', { q: t('qName')[quality] }));
   } else {
     autoQuality = false;
   }
@@ -135,11 +136,22 @@ window.addEventListener('resize', resize);
 // --- UI --------------------------------------------------------------------
 const overlay = document.getElementById('overlay');
 const startBtn = document.getElementById('start');
-const hud = document.getElementById('hud');
+const fpsEl = document.getElementById('fps');
+const dev = document.getElementById('dev');
+const devBody = document.getElementById('devBody');
+let startState = 'loading';                 // loading -> enter -> continue
+function updateTexts() {
+  applyTexts();
+  startBtn.textContent = t(startState);
+  if (!dev.classList.contains('hidden')) renderDev(devBody);
+}
+initLang();
+updateTexts();
+
 function begin() {
   player.active = true;
   overlay.classList.add('hidden');
-  hud.classList.remove('hidden');
+  fpsEl.classList.remove('hidden');
   player.lock();
 }
 startBtn.addEventListener('click', begin);
@@ -147,24 +159,40 @@ renderer.domElement.addEventListener('click', () => { if (player.active && !play
 player.onLockChange = (locked) => {
   if (!locked && player.active) {
     overlay.classList.remove('hidden');
-    startBtn.textContent = 'Продолжить';
+    startState = 'continue';
+    startBtn.textContent = t(startState);
   }
 };
 document.querySelectorAll('[data-quality]').forEach((b) => b.addEventListener('click', (e) => {
   e.stopPropagation();
   applyQuality(b.dataset.quality, { byUser: true });
 }));
+document.querySelectorAll('[data-lang]').forEach((b) => b.addEventListener('click', () => {
+  setLang(b.dataset.lang);
+  updateTexts();
+}));
+
+// "Development" window: how the project was put together
+function openDev() {
+  renderDev(devBody);
+  dev.classList.remove('hidden');
+  devBody.scrollTop = 0;
+}
+function closeDev() { dev.classList.add('hidden'); }
+document.getElementById('devOpen').addEventListener('click', openDev);
+document.getElementById('devClose').addEventListener('click', closeDev);
+dev.addEventListener('click', (e) => { if (e.target === dev) closeDev(); });
+
 window.addEventListener('keydown', (e) => {
+  if (e.code === 'Escape' && !dev.classList.contains('hidden')) closeDev();
   if (e.code === 'KeyG') {
     applyQuality(QUALITY[(QUALITY.indexOf(quality) + 1) % QUALITY.length], { byUser: true });
-    showToast(`Качество: ${QUALITY_NAMES[quality]}`);
+    showToast(t('qualityToast', { q: t('qName')[quality] }));
   }
-  if (e.code === 'KeyH') hud.classList.toggle('collapsed');
   if (e.code === 'KeyP') console.log(`view=${player.pos.x.toFixed(2)},${player.pos.z.toFixed(2)},${player.yaw.toFixed(2)},${player.pitch.toFixed(2)}`);
 });
 
 // fps counter
-const fpsEl = document.getElementById('fps');
 let frames = 0, fpsT = 0;
 
 // --- loop ------------------------------------------------------------------
@@ -186,7 +214,8 @@ function frame() {
 // compile shaders up front (in parallel where the browser supports it), then allow entering
 renderer.compileAsync(scene, camera).catch(() => {}).then(() => {
   startBtn.disabled = false;
-  if (startBtn.textContent === 'Загрузка…') startBtn.textContent = 'Войти';
+  if (startState === 'loading') startState = 'enter';
+  startBtn.textContent = t(startState);
 });
 
 if (params.has('still')) {
@@ -198,4 +227,4 @@ if (params.has('still')) {
 } else {
   renderer.setAnimationLoop(frame);
 }
-window.__app = { scene, camera, renderer, player, applyQuality };
+window.__app = { scene, camera, renderer, player, applyQuality, openDev, getLang };

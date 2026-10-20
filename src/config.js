@@ -3,75 +3,87 @@
 // Origin: X = 0 is the window wall of the kitchen-living room,
 //         Z = 0 is the back wall of the computer niche.
 //
-// Values marked "(scheme)" or "(photo)" come from the user's measurements;
+// Values marked "(measured)" come from the user's measurements;
 // everything else is estimated from the photos and can be corrected here.
 
-export const CEILING = 3.0;            // (photo 1, 6)
-export const SOFFIT_BOTTOM = 2.5;      // soffit boxes are 0.5 m tall (photo 1, 6)
-export const EYE_HEIGHT = 1.75;
+export const CEILING = 3.0;            // (measured)
+export const SOFFIT_BOTTOM = 2.5;      // soffit boxes are 0.5 m tall (measured)
+export const EYE_HEIGHT = 1.65;
 export const PLAYER_RADIUS = 0.22;
 export const WALK_SPEED = 1.35;        // m/s, calm walking pace
 
-// Kitchen-living room (lower part of the scheme)
-export const LIVING = {
-  x0: 0, x1: 4.70,                     // 4.70 (scheme)
-  z0: 3.30, z1: 6.20,                  // 2.90 (scheme)
-};
+const STRAIGHT = 2.96;                 // hall west wall up to the diagonal (measured)
+const DIAG_LEN = 0.98;                 // diagonal wall (measured), 45° as on the scheme
+const DIAG = DIAG_LEN / Math.SQRT2;
+const BEAM_LEN = 2.24;                 // ceiling beam over the kitchen opening (measured)
 
-// Hall with the computer niche (upper part of the scheme)
-export const HALL = {
-  x0: 3.17, x1: 6.68,                  // 3.51 (scheme)
-  z0: 0, z1: LIVING.z0,                // 3.30 (scheme, read as full depth)
-};
+// Kitchen-living room (lower part of the scheme): 4.70 x 2.90 (measured)
+const LIVING_X1 = 4.70;
+// the beam spans the opening from the end of the diagonal to the corner by the sofa
+const HALL_X0 = LIVING_X1 - BEAM_LEN + DIAG;
+
+// Hall with the computer niche (upper part of the scheme): 3.51 wide (measured)
+export const HALL = { x0: HALL_X0, x1: HALL_X0 + 3.51, z0: 0, z1: STRAIGHT + DIAG };
+
+export const LIVING = { x0: 0, x1: LIVING_X1, z0: HALL.z1, z1: HALL.z1 + 2.90 };
 
 // Diagonal wall with the leopard painting, from the kitchen side to the hall side
-export const DIAGONAL = { a: [2.40, LIVING.z0], b: [HALL.x0, 2.72] };
+export const DIAGONAL = { a: [HALL.x0 - DIAG, LIVING.z0], b: [HALL.x0, STRAIGHT] };
 
-// Computer niche: 0.82 deep (scheme), lowered ceiling with three spots
-export const NICHE = { x0: HALL.x0, x1: 4.98, z0: 0, z1: 0.82 };
+// Computer niche: 0.82 deep (measured), lowered ceiling with three spots
+export const NICHE = { x0: HALL.x0, x1: HALL.x0 + 1.83, z0: 0, z1: 0.82 };
 
 // Pillar between the niche and the arch, with two decorative niches in it
-export const PILLAR = { x0: NICHE.x1, x1: 5.38, z0: 0, z1: NICHE.z1 };
+export const PILLAR = { x0: NICHE.x1, x1: NICHE.x1 + 0.40, z0: 0, z1: NICHE.z1 };
 
 // Arch passage to the corridor (the 1.04 m box on the scheme)
 export const ARCH = {
-  x0: PILLAR.x1, x1: HALL.x1,          // opening width 1.30, the passage continues the east wall
+  x0: PILLAR.x1, x1: HALL.x1 - 0.12,   // 0.12 of wall on the right side (measured)
   wallZ: NICHE.z1,                     // front face of the arch wall
   thickness: 0.30,
   spring: 2.05,                        // height where the round top starts
   corridorEnd: -1.90,                  // dead end of the (not photographed) corridor
 };
 
-// Lowered ceiling band over the opening between the kitchen and the hall
-export const SOFFIT_BAND = { x0: DIAGONAL.a[0], x1: LIVING.x1, z0: 3.00, z1: 3.60 };
+// Lowered-ceiling beam over the opening between the kitchen and the hall:
+// 0.41 x 2.24 (measured), flush with the hall wall, sitting on the kitchen side
+export const BEAM = { x0: DIAGONAL.a[0], x1: LIVING.x1, z0: LIVING.z0, z1: LIVING.z0 + 0.41 };
 
-export const DOOR = { height: 2.16, leafWidth: 0.78, casing: 0.07 };
+export const DOOR = { height: 2.16, leafWidth: 0.78, casing: 0.07 };   // (measured)
+const DOOR_OPENING = DOOR.leafWidth + 0.05;
 
-// Openings. "along" is measured along the wall from its start point.
+// Openings. Positions along the walls are estimated from photos 1, 5 and 6.
 export const OPENINGS = {
-  // west wall of the hall, next to the computer niche (photo 1, 5, 6)
-  hallWestDoor: { z0: 0.86, z1: 1.78 },
-  // narrow dark stained-glass panel next to that door (photo 5, 6)
+  // west wall of the hall, next to the computer niche
+  hallWestDoor: { z0: 0.88, z1: 0.88 + DOOR_OPENING },
+  // narrow dark stained-glass panel next to that door
   glassPanel: { z0: 1.98, z1: 2.50, y0: 0.94, y1: 2.61 },
-  // door in the south wall of the hall, near the passage to the kitchen (photo 2, 6)
-  hallSouthDoor: { x0: 5.15, x1: 6.07 },
-  // window in the end wall of the kitchen (photo 3)
-  window: { z0: 4.20, z1: 5.40, y0: 0.90, y1: 2.55 },
+  // door in the south wall of the hall, near the passage to the kitchen
+  hallSouthDoor: { x0: 5.15, x1: 5.15 + DOOR_OPENING },
+  // deep window niche in the end wall of the kitchen (photo 2.5), open down to the floor
+  window: { z0: LIVING.z0 + 0.77, z1: LIVING.z0 + 2.20, sill: 0.85, top: 2.45 },
 };
 
 export const WALL_THICKNESS = { inner: 0.14, outer: 0.45 };
 
 export const KITCHEN = {
-  counterTop: 0.85,                    // (photo 3)
-  counterDepth: 0.60,                  // (photo 4)
-  counterX1: LIVING.x1,
+  counterTop: 0.85,                    // (measured)
+  counterDepth: 0.60,                  // (measured)
+  counterX1: 3.80,                     // the counter ends at the glass TV stand
   upperY0: 1.45, upperY1: 2.35, upperDepth: 0.34,
   hob: { x0: 0.55, x1: 1.15 },
-  sinkX: 3.25,
-  bar: { x0: 3.15, x1: 3.65, z0: 4.62 },   // peninsula from the counter towards the room
-  pole: [3.40, 4.80],
+  sinkX: 3.38,                         // between the bar and the TV stand (photo 2.2, 2.4)
+  bar: { x0: 2.60, x1: 3.10, z0: LIVING.z0 + 1.32 },   // peninsula from the counter towards the room
+  pole: [2.85, LIVING.z0 + 1.50],
+  tvStand: { x0: 3.86, x1: 4.66, depth: 0.45, height: 0.5 },
 };
 
-export const SOFA = { x0: 3.80, x1: LIVING.x1, z0: 3.42, z1: 5.52 };
+export const FRIDGE = { x0: 0, x1: 0.60, z0: LIVING.z0, z1: LIVING.z0 + 0.60, h: 1.78 };   // (measured)
+
+// Sofa 2 x 1 x 1 (measured), back against the east wall of the living room
+export const SOFA = { x0: LIVING.x1 - 1.0, x1: LIVING.x1, z0: LIVING.z0 + 0.12, z1: LIVING.z0 + 2.12, h: 1.0 };
+
+// Wall bars on the east wall of the hall, 0.70 wide (measured)
+export const WALL_BARS = { z0: 1.83, z1: 2.53 };
 
 export const START = { x: 3.55, z: 2.55, yaw: -0.75, pitch: -0.05 };

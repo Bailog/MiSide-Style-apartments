@@ -65,11 +65,13 @@ function officeChair(B, M) {
   for (const sx of [-0.22, 0.22]) {
     B.rod([sx, 0.02, -0.26], [sx, 0.02, 0.28], r, W);
     B.rod([sx, 0.02, -0.26], [sx * 0.9, 0.44, -0.16], r, W);
+    B.rod([sx, 0.02, 0.28], [sx * 0.9, 0.44, 0.17], r, W);      // rear legs up to the seat
     B.rod([sx * 0.95, 0.46, 0.12], [sx * 1.05, 0.66, 0.08], r, W);
     B.rod([sx * 1.05, 0.66, 0.08], [sx * 1.05, 0.66, -0.16], r, W);
     B.add(roundedBoxGeo(0.05, 0.03, 0.24, 0.012), W, [sx * 1.05, 0.675, -0.04]);
   }
   B.rod([-0.22, 0.02, 0.28], [0.22, 0.02, 0.28], r, W);
+  B.rod([-0.2, 0.43, 0.17], [0.2, 0.43, 0.17], r, W);
   B.add(roundedBoxGeo(0.48, 0.07, 0.46, 0.03), W, [0, 0.45, 0]);
   B.add(roundedBoxGeo(0.44, 0.045, 0.42, 0.02, 2), M.cushion, [0, 0.5, -0.01], [0.04, 0.05, 0.02]);
   B.add(roundedBoxGeo(0.46, 0.56, 0.06, 0.04), W, [0, 0.82, 0.25], [-0.14, 0, 0]);
@@ -77,37 +79,45 @@ function officeChair(B, M) {
   B.rod([0, 0.48, 0.2], [0, 0.6, 0.24], 0.02, W);
 }
 
-// Wall bars with a pull-up module on the east wall (photo 1, 2, 4).
+// Wall bars (0.70 wide) with a pull-up module on the east wall (photo 1, 2, 4).
 function swedishWall(B, M, colliders) {
-  const x = C.HALL.x1, z0 = 1.97, z1 = 2.73, H = 2.42;
+  const x = C.HALL.x1, H = 2.42;
+  const z0 = C.WALL_BARS.z0 + 0.03, z1 = C.WALL_BARS.z1 - 0.03;     // post centres
   for (const z of [z0, z1]) {
     B.box(x - 0.14, 0, z - 0.03, x - 0.08, H, z + 0.03, M.swedishWhite);
     for (const y of [0.25, 1.2, 2.2]) B.box(x - 0.08, y, z - 0.025, x, y + 0.06, z + 0.025, M.swedishWhite);
   }
   for (let y = 0.15; y < H - 0.1; y += 0.25) B.rod([x - 0.11, y, z0], [x - 0.11, y, z1], 0.016, M.swedishRung);
   // pull-up module
-  for (const z of [z0 - 0.04, z1 + 0.04]) {
+  for (const z of [z0, z1]) {
     B.box(x - 0.62, H - 0.08, z - 0.02, x - 0.08, H - 0.02, z + 0.02, M.swedishWhite);
     B.rod([x - 0.12, H - 0.5, z], [x - 0.4, H - 0.08, z], 0.014, M.swedishWhite);
   }
-  B.rod([x - 0.6, H - 0.05, z0 - 0.2], [x - 0.6, H - 0.05, z1 + 0.2], 0.016, M.swedishRung);
-  B.box(x - 0.62, H - 0.02, z0 - 0.06, x - 0.56, H + 0.02, z1 + 0.06, M.swedishWhite);
+  B.rod([x - 0.6, H - 0.05, z0 - 0.15], [x - 0.6, H - 0.05, z1 + 0.15], 0.016, M.swedishRung);
+  B.box(x - 0.62, H - 0.02, z0 - 0.03, x - 0.56, H + 0.02, z1 + 0.03, M.swedishWhite);
   // two resistance bands hanging from a rung
-  for (const [z, mat] of [[2.25, M.swedishRung], [2.4, M.bandPurple]]) {
+  const zm = (z0 + z1) / 2;
+  for (const [z, mat] of [[zm - 0.08, M.swedishRung], [zm + 0.07, M.bandPurple]]) {
     B.box(x - 0.13, 0.95, z - 0.015, x - 0.12, 1.43, z + 0.015, mat, { cast: false });
     B.box(x - 0.16, 0.95, z - 0.015, x - 0.15, 1.43, z + 0.015, mat, { cast: false });
   }
-  colliders.push({ type: 'box', x0: x - 0.16, z0: z0 - 0.04, x1: x, z1: z1 + 0.04 });
-  blob(B, M, x - 0.16, z0, x, z1);
+  colliders.push({ type: 'box', x0: x - 0.16, z0: C.WALL_BARS.z0, x1: x, z1: C.WALL_BARS.z1 });
+  blob(B, M, x - 0.16, C.WALL_BARS.z0, x, C.WALL_BARS.z1);
 }
 
-function bin(B, M, colliders) {
-  const x = 6.42, z = 3.02;
-  B.cyl(x, z, 0, 0.62, 0.17, M.bin, 16);
-  B.cyl(x, z, 0.62, 0.625, 0.172, M.binInside, 16, { cast: false });
-  B.cyl(x, z, 0.625, 0.628, 0.15, M.bin, 16, { cast: false });
-  colliders.push({ type: 'circle', x, z, r: 0.2 });
-  blob(B, M, x - 0.18, z - 0.18, x + 0.18, z + 0.18);
+// Rolled two-layer yoga mat standing on its end: dark outside, orange inside (photo 2).
+function yogaMat(B, M, colliders) {
+  const x = C.HALL.x1 - 0.22, z = C.WALL_BARS.z1 + 0.32, h = 0.93, R = 0.15;
+  B.cyl(x, z, 0, h, R, M.bin, 20);
+  const rings = [[R, 0.13, M.bin], [0.13, 0.112, M.binInside], [0.112, 0.094, M.bin], [0.094, 0.078, M.binInside]];
+  for (const [r0, r1, mat] of rings) {
+    const g = new THREE.RingGeometry(r1, r0, 24);
+    g.rotateX(-Math.PI / 2);
+    B.add(g, mat, [x, h + 0.001, z], [0, 0, 0], { cast: false });
+  }
+  B.cyl(x, z, h - 0.25, h + 0.0005, 0.078, M.blackPlastic, 16, { cast: false });
+  colliders.push({ type: 'circle', x, z, r: R + 0.02 });
+  blob(B, M, x - R, z - R, x + R, z + R);
 }
 
 export function buildHall(B, M, colliders) {
@@ -120,6 +130,6 @@ export function buildHall(B, M, colliders) {
   colliders.push({ type: 'circle', x: chair.x, z: chair.z, r: 0.3 });
   blob(B, M, chair.x - 0.26, chair.z - 0.26, chair.x + 0.26, chair.z + 0.3);
   swedishWall(B, M, colliders);
-  bin(B, M, colliders);
+  yogaMat(B, M, colliders);
   return fx;
 }

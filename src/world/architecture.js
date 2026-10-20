@@ -9,23 +9,24 @@ const { CEILING: H } = C;
 // ext0/ext1 extend the slab past convex corners so no light leaks through the seams.
 function wallList() {
   const L = C.LIVING, HL = C.HALL, O = C.OPENINGS;
-  const liv = [2.3, 4.8], hall = [5.0, 1.8];
+  const liv = [2.3, L.z0 + 1.5], hall = [5.0, 1.8];
   const door = (p0, p1) => ({ p0, p1, y0: 0, y1: C.DOOR.height - C.DOOR.casing, kind: 'door' });
   return [
     { a: [L.x0, L.z0], b: [L.x0, L.z1], inside: liv, t: C.WALL_THICKNESS.outer, ext0: 0.3, ext1: 0.3,
-      openings: [{ p0: [0, O.window.z0], p1: [0, O.window.z1], y0: O.window.y0, y1: O.window.y1, kind: 'window' }] },
+      openings: [{ p0: [0, O.window.z0], p1: [0, O.window.z1], y0: 0, y1: O.window.top, kind: 'niche' }] },
     { a: [L.x0, L.z1], b: [L.x1, L.z1], inside: liv, t: 0.25, ext0: 0.3, ext1: 0.3 },
     { a: [L.x1, L.z1], b: [L.x1, L.z0], inside: liv, t: C.WALL_THICKNESS.inner, ext0: 0.3, ext1: 0 },
-    { a: [L.x1, HL.z1], b: [HL.x1, HL.z1], inside: hall, t: C.WALL_THICKNESS.inner, ext0: 0, ext1: 0.3,
+    // starts behind the east wall of the living room, so the two never share a face (no z-fighting)
+    { a: [L.x1, HL.z1], b: [HL.x1, HL.z1], inside: hall, t: C.WALL_THICKNESS.inner, ext0: -C.WALL_THICKNESS.inner, ext1: 0.3,
       openings: [door([O.hallSouthDoor.x0, HL.z1], [O.hallSouthDoor.x1, HL.z1])] },
-    { a: [HL.x1, HL.z1], b: [HL.x1, C.ARCH.wallZ - C.ARCH.thickness], inside: hall, t: 0.25, ext0: 0.3, ext1: 0 },
+    { a: [HL.x1, HL.z1], b: [HL.x1, C.ARCH.wallZ], inside: hall, t: 0.25, ext0: 0.3, ext1: 0.3 },
     { a: [C.NICHE.x0, 0], b: [C.NICHE.x1, 0], inside: hall, t: 0.25, ext0: 0.3, ext1: 0.2 },
     { a: [HL.x0, C.DIAGONAL.b[1]], b: [HL.x0, 0], inside: hall, t: C.WALL_THICKNESS.inner, ext0: 0, ext1: 0.3,
       openings: [
         door([HL.x0, O.hallWestDoor.z0], [HL.x0, O.hallWestDoor.z1]),
         { p0: [HL.x0, O.glassPanel.z0], p1: [HL.x0, O.glassPanel.z1], y0: O.glassPanel.y0, y1: O.glassPanel.y1, kind: 'glass' },
       ] },
-    { a: C.DIAGONAL.a, b: C.DIAGONAL.b, inside: [3.2, 3.3], t: C.WALL_THICKNESS.inner, ext0: 0, ext1: 0 },
+    { a: C.DIAGONAL.a, b: C.DIAGONAL.b, inside: [C.DIAGONAL.b[0] + 0.2, C.DIAGONAL.a[1] - 0.1], t: C.WALL_THICKNESS.inner, ext0: 0, ext1: 0 },
     { a: [L.x0, L.z0], b: C.DIAGONAL.a, inside: liv, t: C.WALL_THICKNESS.inner, ext0: 0.3, ext1: 0 },
   ];
 }
@@ -41,17 +42,18 @@ function buildWall(B, M, w) {
     if (t0 > t1) [t0, t1] = [t1, t0];
     return { ...o, t0, t1 };
   }).sort((p, q) => p.t0 - q.t0);
-  // outline runs along the floor and steps up around door openings
+  // outline runs along the floor and steps up around openings that reach the floor
+  const notch = (h) => h.kind === 'door' || h.kind === 'niche';
   const shape = new THREE.Shape();
   shape.moveTo(-startExt, 0);
-  for (const o of holes.filter((h) => h.kind === 'door')) {
+  for (const o of holes.filter(notch)) {
     shape.lineTo(o.t0, 0); shape.lineTo(o.t0, o.y1); shape.lineTo(o.t1, o.y1); shape.lineTo(o.t1, 0);
   }
   shape.lineTo(pl.L + endExt, 0);
   shape.lineTo(pl.L + endExt, H);
   shape.lineTo(-startExt, H);
   shape.closePath();
-  for (const o of holes.filter((h) => h.kind !== 'door')) {
+  for (const o of holes.filter((h) => !notch(h))) {
     const hole = new THREE.Path();
     hole.moveTo(o.t0, o.y0); hole.lineTo(o.t0, o.y1); hole.lineTo(o.t1, o.y1); hole.lineTo(o.t1, o.y0); hole.closePath();
     shape.holes.push(hole);
@@ -67,7 +69,8 @@ function floorOutline() {
   const L = C.LIVING, HL = C.HALL, P = C.PILLAR, A = C.ARCH;
   return [
     [L.x0, L.z0], C.DIAGONAL.a, C.DIAGONAL.b, [HL.x0, 0], [P.x1, 0], [P.x1, A.wallZ - A.thickness],
-    [HL.x1, A.wallZ - A.thickness], [HL.x1, HL.z1], [L.x1, HL.z1], [L.x1, L.z1], [L.x0, L.z1],
+    [A.x1, A.wallZ - A.thickness], [A.x1, A.wallZ], [HL.x1, A.wallZ], [HL.x1, HL.z1], [L.x1, HL.z1],
+    [L.x1, L.z1], [L.x0, L.z1],
   ];
 }
 
@@ -85,11 +88,11 @@ function buildFloorCeiling(B, M) {
   B.add(cg, M.ceiling, [0, H, 0], [0, 0, 0], { cast: false });
 }
 
-// Lowered-ceiling boxes (0.5 m) over the computer niche and over the kitchen opening.
+// Lowered-ceiling boxes (0.5 m) over the computer niche and the beam over the kitchen opening.
 function buildSoffits(B, M) {
   const top = H, bot = C.SOFFIT_BOTTOM;
   const mats = [M.wallPlain, M.wallPlain, M.ceiling, M.ceiling, M.wallPlain, M.wallPlain];
-  const N = C.NICHE, S = C.SOFFIT_BAND;
+  const N = C.NICHE, S = C.BEAM;
   B.box(N.x0, bot, N.z0, N.x1, top, N.z1, mats);
   B.box(S.x0, bot, S.z0, S.x1, top, S.z1, mats);
   // small cornice under the soffit edges
@@ -126,13 +129,14 @@ function buildPillar(B, M) {
   B.add(vg, M.pinkVase, [(vase.x0 + vase.x1) / 2, vase.y0, (vz + P.z1) / 2]);
 }
 
-// Header with a round arch over the passage to the corridor, plus a dark dead-end corridor.
+// Wall with a round arch over the passage to the corridor (a narrow pier on its right),
+// plus a dark dead-end corridor behind it.
 function buildArch(B, M) {
-  const A = C.ARCH, w = A.x1 - A.x0, r = w / 2;
+  const A = C.ARCH, w = A.x1 - A.x0, r = w / 2, W = C.HALL.x1 - A.x0;
   const s = new THREE.Shape();
-  s.moveTo(0, A.spring);
-  s.lineTo(0, H); s.lineTo(w, H); s.lineTo(w, A.spring);
-  s.absarc(r, A.spring, r, 0, Math.PI, false);
+  s.moveTo(w, 0);
+  s.lineTo(W, 0); s.lineTo(W, H); s.lineTo(0, H); s.lineTo(0, A.spring);
+  s.absarc(r, A.spring, r, Math.PI, 0, true);
   s.closePath();
   const g = extrudeGeo(s, A.thickness, { curveSegments: 14 });
   g.translate(A.x0, 0, A.wallZ - A.thickness);
@@ -209,45 +213,55 @@ function buildGlassPanel(B, M, pl, hole, wallT) {
   }
 }
 
-// Window in the thick end wall: PVC frame, glass, sill, radiator, curtains and the sky behind.
+// Deep window niche in the end wall (photo 2.5): wooden window with blinds, a wide wooden
+// sill, a slatted wooden radiator cover below it, a valance on top and the night sky outside.
 function buildWindow(B, M) {
   const W = C.OPENINGS.window, t = C.WALL_THICKNESS.outer;
-  const xf = -t * 0.45;             // frame plane
-  const z0 = W.z0, z1 = W.z1, y0 = W.y0, y1 = W.y1;
-  const fr = 0.06;
-  const bar = (za, zb, ya, yb) => B.box(xf - 0.035, ya, za, xf + 0.035, yb, zb, M.windowFrame);
-  bar(z0, z0 + fr, y0, y1); bar(z1 - fr, z1, y0, y1);
-  bar(z0, z1, y0, y0 + fr); bar(z0, z1, y1 - fr, y1);
-  const zm = (z0 + z1) / 2;
-  bar(zm - 0.04, zm + 0.04, y0, y1);                    // mullion
-  bar(z0, z1, 2.05, 2.11);                               // transom
-  // sash handles
-  B.box(xf + 0.035, 1.45, zm - 0.09, xf + 0.06, 1.6, zm - 0.07, M.whitePaint);
-  B.add(quadGeo([xf, y0, z1], [xf, y0, z0], [xf, y1, z0], [xf, y1, z1]), M.windowGlass, [0, 0, 0], [0, 0, 0], { cast: false, receive: false, layer: 1 });
+  const z0 = W.z0, z1 = W.z1, sill = W.sill, top = W.top;
+  const xf = -t + 0.07;                 // window frame plane, near the outer face
+  // back of the niche under the window
+  B.box(-t, 0, z0, xf - 0.03, sill, z1, M.wallPlain);
+  // frame and sash
+  const fr = 0.07, sa = 0.05;
+  const bar = (za, zb, ya, yb, inset = 0) => B.box(xf - 0.035 + inset, ya, za, xf + 0.035, yb, zb, M.windowWood);
+  bar(z0, z0 + fr, sill, top); bar(z1 - fr, z1, sill, top);
+  bar(z0, z1, sill, sill + fr); bar(z0, z1, top - fr, top);
+  const s0 = z0 + fr, s1 = z1 - fr, sy0 = sill + fr, sy1 = top - fr;
+  bar(s0, s0 + sa, sy0, sy1, 0.02); bar(s1 - sa, s1, sy0, sy1, 0.02);
+  bar(s0, s1, sy0, sy0 + sa, 0.02); bar(s0, s1, sy1 - sa, sy1, 0.02);
+  B.box(xf + 0.035, 1.4, s1 - 0.045, xf + 0.06, 1.55, s1 - 0.025, M.brass);
+  const xg = xf + 0.005;
+  B.add(quadGeo([xg, sy0, s1], [xg, sy0, s0], [xg, sy1, s0], [xg, sy1, s1]), M.windowGlass, [0, 0, 0], [0, 0, 0],
+    { cast: false, receive: false, layer: 1 });
+  // horizontal blinds lowered over the upper part; the tilted slats stripe the moonlight
+  const bx = xf + 0.075, bz0 = s0 + 0.01, bz1 = s1 - 0.01, blindBottom = 1.62;
+  B.box(bx - 0.025, sy1 - 0.035, bz0, bx + 0.025, sy1, bz1, M.blinds);
+  for (let y = sy1 - 0.05; y > blindBottom; y -= 0.024) {
+    B.add(boxGeo(0.026, 0.002, bz1 - bz0), M.blinds, [bx, y, (bz0 + bz1) / 2], [0, 0, 0.55], { receive: false });
+  }
+  B.box(bx - 0.016, blindBottom - 0.012, bz0, bx + 0.016, blindBottom, bz1, M.blinds);
   // sky backdrop far behind the glass
   const sky = new THREE.PlaneGeometry(8, 4);
   sky.rotateY(Math.PI / 2);
-  B.add(sky, M.sky, [-2.6, 1.9, 4.16], [0, 0, 0], { cast: false, receive: false, layer: 1 });
-  // wide sill joined to the kitchen counter, radiator below
-  const kt = C.KITCHEN.counterTop;
-  B.box(xf + 0.04, kt - 0.04, z0 - 0.1, 0.32, kt, C.LIVING.z1 - C.KITCHEN.counterDepth, M.countertop);
-  for (let z = z0 + 0.1; z < z1 - 0.12; z += 0.085) {
-    B.box(0.05, 0.16, z, 0.17, 0.72, z + 0.07, M.radiator);
+  B.add(sky, M.sky, [-2.6, 1.3, (z0 + z1) / 2 - 0.64], [0, 0, 0], { cast: false, receive: false, layer: 1 });
+  // wooden sill across the niche, slightly proud of the wall
+  B.box(xf + 0.035, sill - 0.04, z0 - 0.02, 0.05, sill, z1 + 0.02, M.sillWood);
+  // radiator behind a slatted wooden cover
+  B.box(-0.3, 0.15, z0 + 0.12, -0.12, 0.7, z1 - 0.12, M.darkSteel, { cast: false });
+  const cx0 = -0.03, cx1 = -0.005, cy0 = 0.04, cy1 = sill - 0.04;
+  B.box(cx0, cy0, z0, cx1, cy0 + 0.07, z1, M.sillWood);
+  B.box(cx0, cy1 - 0.08, z0, cx1, cy1, z1, M.sillWood);
+  B.box(cx0, cy0, z0, cx1, cy1, z0 + 0.05, M.sillWood);
+  B.box(cx0, cy0, z1 - 0.05, cx1, cy1, z1, M.sillWood);
+  for (let z = z0 + 0.08; z < z1 - 0.07; z += 0.055) {
+    B.box(cx0 + 0.004, cy0 + 0.07, z, cx1 - 0.004, cy1 - 0.08, z + 0.026, M.sillWood);
   }
-  B.box(0.07, 0.2, z0 + 0.1, 0.15, 0.68, z1 - 0.15, M.radiator);
-  // curtains: two side drapes and a valance over the top (photo 3)
+  // valance over the top of the niche (photo 2.5)
   const cx = 0.09;
-  B.box(cx - 0.01, 2.9, z0 - 0.35, cx + 0.01, 2.92, z1 + 0.35, M.brass);
-  const drape = (zc, w) => {
-    const g = pleatedGeo(w, 2.0, 5, 0.035);
-    g.rotateY(Math.PI / 2);
-    B.add(g, M.curtain, [cx + 0.03, 1.9, zc], [0, 0, 0], { receive: true });
-  };
-  drape(z0 - 0.12, 0.45);
-  drape(z1 + 0.12, 0.45);
-  const val = pleatedGeo(z1 - z0 + 0.8, 0.9, 11, 0.04);
+  B.box(cx - 0.01, 2.9, z0 - 0.25, cx + 0.01, 2.92, z1 + 0.25, M.brass);
+  const val = pleatedGeo(z1 - z0 + 0.45, 0.78, 12, 0.04);
   val.rotateY(Math.PI / 2);
-  B.add(val, M.curtain, [cx + 0.07, 2.45, (z0 + z1) / 2], [0, 0, 0]);
+  B.add(val, M.curtain, [cx + 0.05, 2.52, (z0 + z1) / 2], [0, 0, 0]);
 }
 
 // Crown moulding at the ceiling and baseboards at the floor along every wall.
@@ -269,10 +283,11 @@ function buildTrims(B, M, walls) {
       B.add(g, M.cornice, [0, 0, 0], [0, 0, 0], { cast: false });
     }
     // baseboard split around door openings
-    const cuts = (w.openings ?? []).filter((o) => o.kind === 'door').map((o) => {
+    const cuts = (w.openings ?? []).filter((o) => o.kind === 'door' || o.kind === 'niche').map((o) => {
       const t0 = (o.p0[0] - pl.start[0]) * pl.d[0] + (o.p0[1] - pl.start[1]) * pl.d[1];
       const t1 = (o.p1[0] - pl.start[0]) * pl.d[0] + (o.p1[1] - pl.start[1]) * pl.d[1];
-      return [Math.min(t0, t1) - C.DOOR.casing, Math.max(t0, t1) + C.DOOR.casing];
+      const m = o.kind === 'door' ? C.DOOR.casing : 0;
+      return [Math.min(t0, t1) - m, Math.max(t0, t1) + m];
     }).sort((a, b) => a[0] - b[0]);
     let s = 0;
     const runs = [];

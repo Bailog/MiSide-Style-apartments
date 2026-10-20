@@ -63,15 +63,29 @@ export function starField(seed = 7, size = 1024, tile = 2.4) {
   const GB = new Uint8Array(size * size * 2);
   const pxPerM = size / tile;
   const stars = [];
-  const counts = [[150, 'dot'], [36, 'spark'], [9, 'big']];
+  // big sparkles first, then small ones, then dots; each keeps a small gap to its neighbours
+  // (distances wrap around the tile edges so the pattern stays seamless)
+  const counts = [[9, 'big'], [36, 'spark'], [150, 'dot']];
+  const gap = 0.035 * pxPerM;
+  const wrapDist = (ax, ay, bx, by) => {
+    const dx = Math.abs(ax - bx), dy = Math.abs(ay - by);
+    return Math.hypot(Math.min(dx, size - dx), Math.min(dy, size - dy));
+  };
   for (const [n, kind] of counts) {
     for (let i = 0; i < n; i++) {
-      stars.push({ kind, x: r() * size, y: r() * size, phase: r(), speed: r(), b: 0.55 + r() * 0.45 });
+      const rad = (kind === 'dot' ? 0.006 + r() * 0.006 : kind === 'spark' ? 0.03 + r() * 0.02 : 0.055 + r() * 0.03) * pxPerM;
+      const reach = rad * (kind === 'dot' ? 2.2 : 1.0);
+      for (let attempt = 0; attempt < 40; attempt++) {
+        const x = r() * size, y = r() * size;
+        if (stars.every((o) => wrapDist(x, y, o.x, o.y) > reach + o.reach + gap)) {
+          stars.push({ kind, x, y, rad, reach, phase: r(), speed: r(), b: 0.55 + r() * 0.45 });
+          break;
+        }
+      }
     }
   }
   for (const s of stars) {
-    // radius in meters -> px
-    const rad = (s.kind === 'dot' ? 0.006 + r() * 0.006 : s.kind === 'spark' ? 0.03 + r() * 0.02 : 0.055 + r() * 0.03) * pxPerM;
+    const rad = s.rad;
     const ext = Math.ceil(rad * (s.kind === 'dot' ? 3 : 1.2));
     for (let oy = -ext; oy <= ext; oy++) {
       for (let ox = -ext; ox <= ext; ox++) {
@@ -184,7 +198,7 @@ export function woodGrain(base = [20, 55, 30], seed = 5, tile = 1.0, contrast = 
 }
 
 // Cabinet / drawer front with a raised panel (0..1 UVs).
-export function cabinetFront({ base = [14, 55, 26], w = 256, h = 384, arch = false, glass = false, knob = 'right' } = {}) {
+export function cabinetFront({ base = [14, 55, 26], w = 256, h = 384, arch = false, glass = false, leaded = false, knob = 'right' } = {}) {
   const [c, g] = canvas(w, h);
   const [hh, s, l] = base;
   g.fillStyle = hsl(hh, s, l); g.fillRect(0, 0, w, h);
@@ -209,6 +223,18 @@ export function cabinetFront({ base = [14, 55, 26], w = 256, h = 384, arch = fal
     g.fillStyle = 'rgba(25,20,35,0.9)'; panel(); g.fill();
     g.fillStyle = 'rgba(255,255,255,0.08)';
     g.beginPath(); g.moveTo(px0 + 10, py1 - 10); g.lineTo(px0 + 40, py0 + 20); g.lineTo(px0 + 60, py0 + 20); g.lineTo(px0 + 30, py1 - 10); g.fill();
+    if (leaded) {
+      // brass lead lines: a narrow ladder down the middle and a line across (photo 2.4)
+      const cx = w / 2;
+      g.strokeStyle = '#c9a25a'; g.lineWidth = 3;
+      g.beginPath();
+      g.moveTo(px0, py0 + m * 1.2); g.lineTo(px1, py0 + m * 1.2);
+      g.moveTo(cx - 12, py0 + m * 1.2); g.lineTo(cx - 12, py1);
+      g.moveTo(cx + 12, py0 + m * 1.2); g.lineTo(cx + 12, py1);
+      for (let y = py0 + m * 1.2 + 50; y < py1 - 10; y += 70) { g.moveTo(cx - 12, y); g.lineTo(cx + 12, y); }
+      g.moveTo(px0, py1 - m * 0.8); g.lineTo(px1, py1 - m * 0.8);
+      g.stroke();
+    }
   } else {
     const grd = g.createLinearGradient(px0, py0, px1, py1);
     grd.addColorStop(0, hsl(hh, s, l + 5)); grd.addColorStop(1, hsl(hh, s, l - 4));
@@ -464,20 +490,52 @@ export function pcFront() {
   return toTexture(c);
 }
 
+function magnets(g, r, x0, y0, w, h, n) {
+  const cols = ['#e05a4f', '#4fa3e0', '#f2c14e', '#7fc77a', '#b07ad9', '#ffffff', '#c98a5a'];
+  for (let i = 0; i < n; i++) {
+    g.fillStyle = cols[Math.floor(r() * cols.length)];
+    const x = x0 + r() * w, y = y0 + r() * h;
+    g.save(); g.translate(x, y); g.rotate((r() - 0.5) * 0.4);
+    if (r() > 0.6) { g.beginPath(); g.arc(0, 0, 7 + r() * 6, 0, 7); g.fill(); }
+    else g.fillRect(-10, -12, 16 + r() * 14, 18 + r() * 14);
+    g.restore();
+  }
+}
+
+// Fridge door: tall fridge door on top, freezer at the bottom, handles on the left.
 export function fridgeFront(seed = 43) {
   const [c, g] = canvas(256, 640);
   const r = rng(seed);
   g.fillStyle = '#f1ece0'; g.fillRect(0, 0, 256, 640);
-  g.fillStyle = '#d9d2c2'; g.fillRect(0, 196, 256, 6);
-  const cols = ['#e05a4f', '#4fa3e0', '#f2c14e', '#7fc77a', '#b07ad9', '#ffffff'];
-  for (let i = 0; i < 14; i++) {
-    g.fillStyle = cols[Math.floor(r() * cols.length)];
-    const x = 40 + r() * 150, y = 220 + r() * 150;
-    g.save(); g.translate(x, y); g.rotate((r() - 0.5) * 0.4);
-    g.fillRect(-10, -12, 18 + r() * 14, 20 + r() * 12);
-    g.restore();
+  g.fillStyle = '#e2dccd'; g.fillRect(0, 0, 256, 26);
+  g.fillStyle = '#5bd06a'; g.fillRect(120, 10, 10, 5);
+  g.fillStyle = '#cfc7b6'; g.fillRect(0, 446, 256, 5);
+  g.fillStyle = '#c9c2b2'; g.fillRect(4, 26, 3, 614); g.fillRect(249, 26, 3, 614);
+  magnets(g, r, 50, 60, 120, 140, 7);
+  g.fillStyle = '#bdb5a3'; g.fillRect(16, 330, 9, 110); g.fillRect(16, 458, 9, 70);
+  return toTexture(c);
+}
+
+// The side of the fridge facing the table, covered with souvenir magnets.
+export function fridgeSide(seed = 44) {
+  const [c, g] = canvas(256, 640);
+  const r = rng(seed);
+  g.fillStyle = '#efe9dc'; g.fillRect(0, 0, 256, 640);
+  magnets(g, r, 50, 60, 150, 180, 16);
+  return toTexture(c);
+}
+
+// Microwave front: dark glass door on the left, two knobs on the right.
+export function microwaveFront() {
+  const [c, g] = canvas(256, 150);
+  g.fillStyle = '#f2f0ec'; g.fillRect(0, 0, 256, 150);
+  g.fillStyle = '#1a1a1f'; g.fillRect(8, 10, 166, 130);
+  g.fillStyle = 'rgba(255,255,255,0.08)'; g.fillRect(14, 16, 154, 20);
+  g.fillStyle = '#d9d6d0'; g.fillRect(176, 10, 8, 130);
+  for (const y of [48, 104]) {
+    g.fillStyle = '#d6d3cc'; g.beginPath(); g.arc(218, y, 20, 0, 7); g.fill();
+    g.fillStyle = '#b8b4ac'; g.fillRect(216, y - 18, 4, 16);
   }
-  g.fillStyle = '#b6ad9b'; g.fillRect(226, 230, 10, 120); g.fillRect(226, 60, 10, 90);
   return toTexture(c);
 }
 
@@ -621,11 +679,50 @@ export function rug(seed = 59) {
   return toTexture(c);
 }
 
-export function tvScreen() {
-  const [c, g] = canvas(256, 160);
-  const grd = g.createLinearGradient(0, 0, 256, 160);
-  grd.addColorStop(0, '#15151c'); grd.addColorStop(0.45, '#0a0a0f'); grd.addColorStop(0.5, '#1c1c26'); grd.addColorStop(1, '#07070a');
-  g.fillStyle = grd; g.fillRect(0, 0, 256, 160);
+// TV home screen with generic app tiles and video thumbnails (photo 2.2).
+export function tvScreen(seed = 61) {
+  const [c, g] = canvas(512, 300);
+  const r = rng(seed);
+  g.fillStyle = '#0b0d14'; g.fillRect(0, 0, 512, 300);
+  const round = (x, y, w, h, rad, col) => {
+    g.fillStyle = col; g.beginPath();
+    g.moveTo(x + rad, y); g.arcTo(x + w, y, x + w, y + h, rad); g.arcTo(x + w, y + h, x, y + h, rad);
+    g.arcTo(x, y + h, x, y, rad); g.arcTo(x, y, x + w, y, rad); g.fill();
+  };
+  // top menu
+  g.fillStyle = '#3d7bff'; g.beginPath(); g.arc(40, 30, 5, 0, 7); g.fill();
+  for (const [x, w] of [[52, 34], [100, 40], [152, 40], [204, 52]]) round(x, 26, w, 7, 3, '#c9cede');
+  round(150, 37, 34, 2, 1, '#ffffff');
+  round(430, 26, 40, 8, 3, '#e8ebf5');
+  // favourite apps
+  const apps = ['#6a3df0', '#e8e8ee', '#f2f2f2', '#2b2f3a', '#25b6d8', '#2f7cf6'];
+  apps.forEach((col, i) => round(40 + i * 60, 52, 54, 32, 4, col));
+  round(46, 62, 36, 12, 3, '#ffffff'); round(106, 64, 20, 8, 2, '#e53935');
+  // video thumbnails
+  const thumbs = [['#2ec4b6', '#1b4332'], ['#8d5524', '#e9c46a'], ['#1d4e89', '#38a3a5'], ['#6c757d', '#adb5bd']];
+  thumbs.forEach(([a, b], i) => {
+    const grd = g.createLinearGradient(0, 100, 0, 150);
+    grd.addColorStop(0, a); grd.addColorStop(1, b);
+    round(46 + i * 104, 100, 98, 52, 4, grd);
+  });
+  round(462, 100, 30, 52, 4, '#e85d4a');
+  // bottom row of coloured tiles
+  const tiles = ['#ff6a00', '#2f5bff', '#e01e5a', '#b13dff'];
+  tiles.forEach((col, i) => {
+    const grd = g.createLinearGradient(46 + i * 104, 170, 46 + i * 104 + 98, 210);
+    grd.addColorStop(0, col); grd.addColorStop(1, '#1a1030');
+    round(46 + i * 104, 170, 98, 42, 4, grd);
+    round(60 + i * 104, 186, 40 + r() * 30, 10, 3, 'rgba(255,255,255,0.9)');
+  });
+  return toTexture(c);
+}
+
+// Diagonal lines for the dark glass shelves of the TV stand.
+export function darkGlass() {
+  const [c, g] = canvas(128, 128);
+  g.fillStyle = '#121119'; g.fillRect(0, 0, 128, 128);
+  g.strokeStyle = 'rgba(255,255,255,0.06)'; g.lineWidth = 10;
+  g.beginPath(); g.moveTo(-20, 100); g.lineTo(100, -20); g.moveTo(30, 150); g.lineTo(150, 30); g.stroke();
   return toTexture(c);
 }
 

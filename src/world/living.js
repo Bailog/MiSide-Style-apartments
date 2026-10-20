@@ -5,40 +5,41 @@ import { blob, onWall } from './common.js';
 
 const faces = (base, o) => ['px', 'nx', 'py', 'ny', 'pz', 'nz'].map((k) => o[k] ?? base);
 
-// Teal velvet sofa with rolled arms against the east wall of the living room (photo 4).
+// Teal velvet sofa with rolled arms against the east wall, 2 x 1 x 1 m (photo 4).
 function sofa(B, M, colliders) {
   const S = C.SOFA;
   const back = S.x1, front = S.x0, z0 = S.z0, z1 = S.z1;
-  const arm = 0.22, depth = back - front;
+  const arm = 0.24, depth = back - front;
   const zc = (z0 + z1) / 2;
   B.add(roundedBoxGeo(depth - 0.04, 0.2, z1 - z0 - 0.04, 0.04), M.sofaDark, [front + depth / 2, 0.2, zc]);
   // seat cushions
   const seatZ0 = z0 + arm, seatZ1 = z1 - arm, half = (seatZ1 - seatZ0) / 2;
+  const seatD = depth - 0.3;
   for (let i = 0; i < 2; i++) {
-    B.add(roundedBoxGeo(depth - 0.24, 0.17, half - 0.01, 0.06, 3), M.sofa,
-      [front + (depth - 0.24) / 2 + 0.02, 0.385, seatZ0 + half * i + half / 2]);
+    B.add(roundedBoxGeo(seatD, 0.18, half - 0.01, 0.06, 3), M.sofa,
+      [front + seatD / 2 + 0.02, 0.39, seatZ0 + half * i + half / 2]);
   }
-  // back rest and back cushions
-  B.add(roundedBoxGeo(0.2, 0.62, z1 - z0 - 0.3, 0.06, 3), M.sofaDark, [back - 0.12, 0.6, zc]);
+  // back rest up to the full height, back cushions leaning on it
+  B.add(roundedBoxGeo(0.24, S.h - 0.3, z1 - z0 - 0.3, 0.07, 3), M.sofaDark, [back - 0.13, 0.3 + (S.h - 0.3) / 2, zc]);
   for (let i = 0; i < 2; i++) {
-    B.add(roundedBoxGeo(0.2, 0.42, half - 0.02, 0.08, 3), M.sofa,
-      [back - 0.3, 0.66, seatZ0 + half * i + half / 2], [0, 0, -0.18]);
+    B.add(roundedBoxGeo(0.22, 0.5, half - 0.02, 0.09, 3), M.sofa,
+      [back - 0.36, 0.72, seatZ0 + half * i + half / 2], [0, 0, -0.18]);
   }
   // arms with a rolled top
   for (const za of [z0 + arm / 2, z1 - arm / 2]) {
-    B.add(roundedBoxGeo(depth - 0.02, 0.48, arm, 0.05, 3), M.sofa, [front + depth / 2, 0.36, za]);
-    const roll = new THREE.CylinderGeometry(0.13, 0.13, depth - 0.04, 14);
+    B.add(roundedBoxGeo(depth - 0.02, 0.5, arm, 0.05, 3), M.sofa, [front + depth / 2, 0.37, za]);
+    const roll = new THREE.CylinderGeometry(0.14, 0.14, depth - 0.04, 14);
     roll.rotateZ(Math.PI / 2);
-    B.add(roll, M.sofa, [front + depth / 2, 0.58, za]);
+    B.add(roll, M.sofa, [front + depth / 2, 0.6, za]);
   }
   for (const [lx, lz] of [[front + 0.06, z0 + 0.06], [front + 0.06, z1 - 0.06], [back - 0.06, z0 + 0.06], [back - 0.06, z1 - 0.06]]) {
     B.cyl(lx, lz, 0, 0.11, 0.025, M.sofaLeg, 8, { rTop: 0.032 });
   }
   // pillows: two zig-zag ones against the back, a colourful one in the corner
   const pillow = (x, y, z, rot, mat) => B.add(roundedBoxGeo(0.14, 0.42, 0.44, 0.06, 3), mat, [x, y, z], rot);
-  pillow(back - 0.45, 0.68, zc - 0.48, [0.05, 0.08, -0.32], M.pillowChevron);
-  pillow(back - 0.45, 0.68, zc + 0.42, [-0.04, -0.06, -0.3], M.pillowChevron);
-  pillow(front + 0.32, 0.62, z0 + 0.38, [0.5, 0.3, -0.6], M.pillowColor);
+  pillow(back - 0.52, 0.72, zc - 0.45, [0.05, 0.08, -0.32], M.pillowChevron);
+  pillow(back - 0.52, 0.72, zc + 0.4, [-0.04, -0.06, -0.3], M.pillowChevron);
+  pillow(front + 0.36, 0.64, z0 + 0.4, [0.5, 0.3, -0.6], M.pillowColor);
   colliders.push({ type: 'box', x0: front, z0, x1: back, z1 });
   blob(B, M, front, z0, back, z1);
 }

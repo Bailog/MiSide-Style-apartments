@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import * as C from '../config.js';
 import * as T from '../textures.js';
 
-// Soft beams of moonlight coming through the two window panes.
+// Soft beam of moonlight coming in under the blinds.
 function lightShafts(scene, moon) {
   const W = C.OPENINGS.window;
   const dir = moon.target.position.clone().sub(moon.position).normalize();
@@ -11,13 +11,13 @@ function lightShafts(scene, moon) {
     color: '#8aa0ff', map: tex, transparent: true, opacity: 0.24,
     blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false,
   });
-  const zm = (W.z0 + W.z1) / 2;
-  const panes = [[W.z0 + 0.07, zm - 0.05], [zm + 0.05, W.z1 - 0.07]];
+  // light enters below the blinds, between the sash frames
+  const panes = [[W.z0 + 0.12, W.z1 - 0.12]];
   const len = 3.4;
   const group = new THREE.Group();
   for (const [z0, z1] of panes) {
-    const y0 = W.y0 + 0.07, y1 = 2.0;
-    const x = -0.1;
+    const y0 = W.sill + 0.12, y1 = 1.6;
+    const x = -C.WALL_THICKNESS.outer + 0.08;
     const c = [[x, y0, z0], [x, y0, z1], [x, y1, z1], [x, y1, z0]].map((p) => new THREE.Vector3(...p));
     const e = c.map((p) => p.clone().addScaledVector(dir, len));
     const pos = [], uv = [];
@@ -44,7 +44,7 @@ function dust(scene, count = 260) {
   const r = T.rng(99);
   const pos = new Float32Array(count * 3), base = new Float32Array(count * 3), col = new Float32Array(count * 3);
   const phase = new Float32Array(count);
-  const areas = [[0.3, 4.6, 3.4, 6.0], [3.3, 6.5, 0.3, 3.2]];
+  const areas = [[0.3, 4.6, C.LIVING.z0 + 0.1, C.LIVING.z1 - 0.2], [C.HALL.x0 + 0.2, C.HALL.x1 - 0.2, 0.3, C.HALL.z1 - 0.1]];
   const warm = new THREE.Color('#ffd7a0'), cold = new THREE.Color('#a8bcff');
   for (let i = 0; i < count; i++) {
     const [x0, x1, z0, z1] = areas[i % 2];
