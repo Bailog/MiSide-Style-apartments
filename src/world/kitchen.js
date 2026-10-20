@@ -77,8 +77,10 @@ function upperCabinets(B, M) {
     B.box(a, y0, z0, b, y1, L.z1, M.cherry);
     B.box(a - 0.01, y1, z0 - 0.04, b + 0.01, y1 + 0.07, L.z1, M.cherry);   // crown
   }
-  const doors = [[0, K.hob.x0 - 0.05, M.upperDoor], [K.hob.x1 + 0.05, 1.65, M.upperDoor], [1.65, 2.1, M.upperGlass],
-    [2.1, 2.55, M.upperGlass], [2.55, (2.55 + xa) / 2, M.upperDoor], [(2.55 + xa) / 2, xa, M.upperDoor]];
+  // four equal doors between the hood and the corner cabinet, the middle two glazed
+  const d0 = K.hob.x1 + 0.05, dw = (xa - d0) / 4;
+  const doors = [[0, K.hob.x0 - 0.05, M.upperDoor], ...[M.upperDoor, M.upperGlass, M.upperGlass, M.upperDoor]
+    .map((mat, i) => [d0 + dw * i, d0 + dw * (i + 1), mat])];
   for (const [a, b, mat] of doors) {
     B.add(boxGeo(b - a - 0.006, y1 - y0 - 0.01, 0.02, 'unit'), faces(M.cherry, { nz: mat }),
       [(a + b) / 2, (y0 + y1) / 2, z0 - 0.01]);

@@ -15,12 +15,14 @@ function wallList() {
     { a: [L.x0, L.z0], b: [L.x0, L.z1], inside: liv, t: C.WALL_THICKNESS.outer, ext0: 0.3, ext1: 0.3,
       openings: [{ p0: [0, O.window.z0], p1: [0, O.window.z1], y0: 0, y1: O.window.top, kind: 'niche' }] },
     { a: [L.x0, L.z1], b: [L.x1, L.z1], inside: liv, t: 0.25, ext0: 0.3, ext1: 0.3 },
-    { a: [L.x1, L.z1], b: [L.x1, L.z0], inside: liv, t: C.WALL_THICKNESS.inner, ext0: 0.3, ext1: 0 },
+    // the sofa wall runs on up to the hall-side edge of the ceiling beam
+    { a: [L.x1, L.z1], b: [L.x1, HL.doorWallZ], inside: liv, t: C.WALL_THICKNESS.inner, ext0: 0.3, ext1: 0 },
     // starts behind the east wall of the living room, so the two never share a face (no z-fighting)
-    { a: [L.x1, HL.z1], b: [HL.x1, HL.z1], inside: hall, t: C.WALL_THICKNESS.inner, ext0: -C.WALL_THICKNESS.inner, ext1: 0.3,
-      // handle on the left as seen from the hall, left slightly open onto a dark room
-      openings: [door([O.hallSouthDoor.x0, HL.z1], [O.hallSouthDoor.x1, HL.z1], { handle: 'end', ajar: 0.32, dark: true })] },
-    { a: [HL.x1, HL.z1], b: [HL.x1, C.ARCH.wallZ], inside: hall, t: 0.25, ext0: 0.3, ext1: 0.3 },
+    { a: [L.x1, HL.doorWallZ], b: [HL.x1, HL.doorWallZ], inside: hall, t: C.WALL_THICKNESS.inner, ext0: -C.WALL_THICKNESS.inner, ext1: 0.3,
+      // handle on the left as seen from the hall; left ajar, opening into the hall, a dark room behind
+      openings: [door([O.hallSouthDoor.x0, HL.doorWallZ], [O.hallSouthDoor.x1, HL.doorWallZ],
+        { handle: 'end', ajar: 0.32, opensIntoRoom: true, dark: true })] },
+    { a: [HL.x1, HL.doorWallZ], b: [HL.x1, C.ARCH.wallZ], inside: hall, t: 0.25, ext0: 0.3, ext1: 0.3 },
     { a: [C.NICHE.x0, 0], b: [C.NICHE.x1, 0], inside: hall, t: 0.25, ext0: 0.3, ext1: 0.2 },
     { a: [HL.x0, C.DIAGONAL.b[1]], b: [HL.x0, 0], inside: hall, t: C.WALL_THICKNESS.inner, ext0: 0, ext1: 0.3,
       openings: [
@@ -70,7 +72,7 @@ function floorOutline() {
   const L = C.LIVING, HL = C.HALL, P = C.PILLAR, A = C.ARCH;
   return [
     [L.x0, L.z0], C.DIAGONAL.a, C.DIAGONAL.b, [HL.x0, 0], [P.x1, 0], [P.x1, A.wallZ - A.depth],
-    [A.x1, A.wallZ - A.depth], [A.x1, A.wallZ], [HL.x1, A.wallZ], [HL.x1, HL.z1], [L.x1, HL.z1],
+    [A.x1, A.wallZ - A.depth], [A.x1, A.wallZ], [HL.x1, A.wallZ], [HL.x1, HL.doorWallZ], [L.x1, HL.doorWallZ],
     [L.x1, L.z1], [L.x0, L.z1],
   ];
 }
@@ -165,6 +167,7 @@ function buildArch(B, M) {
 }
 
 // Door casing, lining and leaf for a door opening found in a wall.
+// Returns the leaf as a collision segment when the door is left ajar into the room.
 function buildDoor(B, M, pl, hole, wallT, inside) {
   const cas = C.DOOR.casing, top = hole.y1;
   const toWorld = (t, y, depth) => {
@@ -190,14 +193,15 @@ function buildDoor(B, M, pl, hole, wallT, inside) {
   piece(hole.t1 - 0.025, hole.t1, 0, top, 0, wallT, M.doorWood);
   piece(hole.t0, hole.t1, top - 0.025, top, 0, wallT, M.doorWood);
   // leaf hung in the middle of the wall; in the wall frame X runs along the wall and
-  // Z points away from the room, so an ajar leaf swings towards +Z
+  // Z points away from the room, so a leaf opening into the room swings towards -Z
   const lw = hole.t1 - hole.t0 - 0.05;
   const handleAtEnd = hole.handle === 'end';
   const sgn = handleAtEnd ? 1 : -1;                       // leaf extends from the hinge along sgn * X
   const hingeT = handleAtEnd ? hole.t0 + 0.025 : hole.t1 - 0.025;
+  const ajar = hole.ajar ?? 0, swing = hole.opensIntoRoom ? -1 : 1;
   const leafMats = [M.doorWood, M.doorWood, M.doorWood, M.doorWood, M.doorLeaf, M.doorLeaf];
   B.at(pl.start[0], 0, pl.start[1], rotY, () => {
-    B.at(hingeT, 0, wallT / 2, -sgn * (hole.ajar ?? 0), () => {
+    B.at(hingeT, 0, wallT / 2, -sgn * swing * ajar, () => {
       B.add(boxGeo(lw, top - 0.035, 0.04, 'unit'), leafMats, [sgn * lw / 2, (top - 0.03) / 2 + 0.005, 0]);
       // lever handle on the room side
       B.box(sgn * (lw - 0.06) - 0.0175, 0.9825, -0.08, sgn * (lw - 0.06) + 0.0175, 1.0175, -0.02, M.brass);
@@ -209,6 +213,10 @@ function buildDoor(B, M, pl, hole, wallT, inside) {
         { cast: false, receive: false });
     }
   });
+  if (!(ajar > 0 && hole.opensIntoRoom)) return null;
+  const out = [-pl.n[0], -pl.n[1]];
+  const at = (t, depth) => [pl.start[0] + pl.d[0] * t + out[0] * depth, pl.start[1] + pl.d[1] * t + out[1] * depth];
+  return [at(hingeT, wallT / 2), at(hingeT + sgn * lw * Math.cos(ajar), wallT / 2 - lw * Math.sin(ajar))];
 }
 
 // Tall decorative glass panel with a white frame.
@@ -342,10 +350,14 @@ function buildAO(B, M, walls) {
 
 export function buildArchitecture(B, M) {
   const walls = wallList();
+  const doorLeaves = [];
   for (const w of walls) {
     const { pl, holes } = buildWall(B, M, w);
     for (const h of holes) {
-      if (h.kind === 'door') buildDoor(B, M, pl, h, w.t, w.inside);
+      if (h.kind === 'door') {
+        const leaf = buildDoor(B, M, pl, h, w.t, w.inside);
+        if (leaf) doorLeaves.push(leaf);
+      }
       if (h.kind === 'glass') buildGlassPanel(B, M, pl, h, w.t);
     }
   }
@@ -356,5 +368,5 @@ export function buildArchitecture(B, M) {
   buildWindow(B, M);
   buildTrims(B, M, walls);
   buildAO(B, M, walls);
-  return { walls };
+  return { walls, doorLeaves };
 }

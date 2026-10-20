@@ -44,7 +44,7 @@ function dust(scene, count = 260) {
   const r = T.rng(99);
   const pos = new Float32Array(count * 3), base = new Float32Array(count * 3), col = new Float32Array(count * 3);
   const phase = new Float32Array(count);
-  const areas = [[0.3, 4.6, C.LIVING.z0 + 0.1, C.LIVING.z1 - 0.2], [C.HALL.x0 + 0.2, C.HALL.x1 - 0.2, 0.3, C.HALL.z1 - 0.1]];
+  const areas = [[0.3, 4.6, C.LIVING.z0 + 0.1, C.LIVING.z1 - 0.2], [C.HALL.x0 + 0.2, C.HALL.x1 - 0.2, 0.3, C.HALL.doorWallZ - 0.1]];
   const warm = new THREE.Color('#ffd7a0'), cold = new THREE.Color('#a8bcff');
   for (let i = 0; i < count; i++) {
     const [x0, x1, z0, z1] = areas[i % 2];

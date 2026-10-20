@@ -43,7 +43,7 @@ const camera = new THREE.PerspectiveCamera(62, 1, 0.05, 60);
 const M = createMaterials();
 const B = new Builder(scene);
 const colliders = [];
-buildArchitecture(B, M);
+const arch = buildArchitecture(B, M);
 const kitchenFx = buildKitchen(B, M, colliders);
 const livingFx = buildLiving(B, M, colliders);
 const hallFx = buildHall(B, M, colliders);
@@ -57,12 +57,13 @@ const A = C.ARCH;
 collision.addPolyline([
   [C.LIVING.x0, C.LIVING.z0], C.DIAGONAL.a, C.DIAGONAL.b, [C.HALL.x0, 0], [C.PILLAR.x1, 0],
   [A.x0, A.walkTo], [A.x1, A.walkTo], [A.x1, A.wallZ], [C.HALL.x1, A.wallZ],
-  [C.HALL.x1, C.HALL.z1], [C.LIVING.x1, C.HALL.z1], [C.LIVING.x1, C.LIVING.z1], [C.LIVING.x0, C.LIVING.z1],
+  [C.HALL.x1, C.HALL.doorWallZ], [C.LIVING.x1, C.HALL.doorWallZ], [C.LIVING.x1, C.LIVING.z1], [C.LIVING.x0, C.LIVING.z1],
 ]);
 collision.add({ type: 'box', x0: C.PILLAR.x0, z0: 0, x1: C.PILLAR.x1, z1: C.PILLAR.z1 });
 const Wn = C.OPENINGS.window;
 collision.add({ type: 'box', x0: -0.5, z0: Wn.z0, x1: 0.05, z1: Wn.z1 });   // window niche with the sill
 colliders.forEach((c) => collision.add(c));
+arch.doorLeaves.forEach(([a, b]) => collision.addSegment(a, b));
 
 // --- player --------------------------------------------------------------
 const view = params.get('view')?.split(',').map(Number);

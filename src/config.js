@@ -22,8 +22,11 @@ const LIVING_X1 = 4.70;
 // the beam spans the opening from the end of the diagonal to the corner by the sofa
 const HALL_X0 = LIVING_X1 - BEAM_LEN + DIAG;
 
-// Hall with the computer niche (upper part of the scheme): 3.51 wide (measured)
-export const HALL = { x0: HALL_X0, x1: HALL_X0 + 3.51, z0: 0, z1: STRAIGHT + DIAG };
+// Hall with the computer niche (upper part of the scheme): 3.51 wide (measured).
+// z1 is the line of the kitchen's north wall; the hall wall with the door, east of the
+// kitchen, is flush with the hall-side face of the ceiling beam (0.41 m further north).
+const BEAM_W = 0.41;
+export const HALL = { x0: HALL_X0, x1: HALL_X0 + 3.51, z0: 0, z1: STRAIGHT + DIAG, doorWallZ: STRAIGHT + DIAG - BEAM_W };
 
 export const LIVING = { x0: 0, x1: LIVING_X1, z0: HALL.z1, z1: HALL.z1 + 2.90 };
 
@@ -48,7 +51,7 @@ export const ARCH = {
 // Lowered-ceiling beam over the opening between the kitchen and the hall, 0.41 x 2.24 (measured).
 // It sits on the hall side: its kitchen face is flush with the kitchen's north wall and runs
 // 2.24 m from the corner of the diagonal wall to the east wall; its west end follows the diagonal.
-export const BEAM = { x0: DIAGONAL.a[0], x1: LIVING.x1, z0: LIVING.z0 - 0.41, z1: LIVING.z0 };
+export const BEAM = { x0: DIAGONAL.a[0], x1: LIVING.x1, z0: HALL.doorWallZ, z1: LIVING.z0 };
 
 export const DOOR = { height: 2.16, leafWidth: 0.78, casing: 0.07 };   // (measured)
 const DOOR_OPENING = DOOR.leafWidth + 0.05;
@@ -68,25 +71,25 @@ export const OPENINGS = {
 export const WALL_THICKNESS = { inner: 0.14, outer: 0.45 };
 
 // The worktop runs along the south wall and ends with the bar turning towards the room;
-// east of the bar stands the glass TV table, 1.2 m wide (measured).
-const TV_TABLE_W = 1.2;
+// east of the bar stands the glass TV table, 1.3 x 0.51 m (measured).
+const TV_TABLE_W = 1.3;
 const BAR_X1 = LIVING.x1 - TV_TABLE_W;
 export const KITCHEN = {
   counterTop: 0.85,                    // (measured)
   counterDepth: 0.60,                  // (measured)
   counterX1: BAR_X1,                   // the worktop ends with the bar
-  upperY0: 1.45, upperY1: 2.35, upperDepth: 0.34,
+  upperY0: 1.45, upperY1: 2.45, upperDepth: 0.34,
   hob: { x0: 0.55, x1: 1.15 },
   sinkX: BAR_X1 - 0.95,                // west of the bar
   bar: { x0: BAR_X1 - 0.5, x1: BAR_X1, z0: LIVING.z0 + 1.32 },   // peninsula towards the room
   pole: [BAR_X1 - 0.25, LIVING.z0 + 1.50],
-  tvStand: { x0: BAR_X1 + 0.02, x1: LIVING.x1 - 0.02, depth: 0.45, height: 0.5 },
+  tvStand: { x0: BAR_X1 + 0.01, x1: LIVING.x1 - 0.01, depth: 0.51, height: 0.5 },
 };
 
 export const FRIDGE = { x0: 0, x1: 0.60, z0: LIVING.z0, z1: LIVING.z0 + 0.60, h: 1.78 };   // (measured)
 
-// Sofa 2 x 1 x 1 (measured), back against the east wall of the living room
-export const SOFA = { x0: LIVING.x1 - 1.0, x1: LIVING.x1, z0: LIVING.z0 + 0.12, z1: LIVING.z0 + 2.12, h: 1.0 };
+// Sofa 2 x 1 x 1 (measured), back against the east wall, pushed up to the corner by the door
+export const SOFA = { x0: LIVING.x1 - 1.0, x1: LIVING.x1, z0: HALL.doorWallZ + 0.03, z1: HALL.doorWallZ + 2.03, h: 1.0 };
 
 // Wall bars on the east wall of the hall, 0.70 wide (measured)
 export const WALL_BARS = { z0: 1.83, z1: 2.53 };
