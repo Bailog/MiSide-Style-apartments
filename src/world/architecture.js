@@ -10,7 +10,7 @@ const { CEILING: H } = C;
 function wallList() {
   const L = C.LIVING, HL = C.HALL, O = C.OPENINGS;
   const liv = [2.3, L.z0 + 1.5], hall = [5.0, 1.8];
-  const door = (p0, p1) => ({ p0, p1, y0: 0, y1: C.DOOR.height - C.DOOR.casing, kind: 'door' });
+  const door = (p0, p1, opts = {}) => ({ p0, p1, y0: 0, y1: C.DOOR.height - C.DOOR.casing, kind: 'door', ...opts });
   return [
     { a: [L.x0, L.z0], b: [L.x0, L.z1], inside: liv, t: C.WALL_THICKNESS.outer, ext0: 0.3, ext1: 0.3,
       openings: [{ p0: [0, O.window.z0], p1: [0, O.window.z1], y0: 0, y1: O.window.top, kind: 'niche' }] },
@@ -18,7 +18,8 @@ function wallList() {
     { a: [L.x1, L.z1], b: [L.x1, L.z0], inside: liv, t: C.WALL_THICKNESS.inner, ext0: 0.3, ext1: 0 },
     // starts behind the east wall of the living room, so the two never share a face (no z-fighting)
     { a: [L.x1, HL.z1], b: [HL.x1, HL.z1], inside: hall, t: C.WALL_THICKNESS.inner, ext0: -C.WALL_THICKNESS.inner, ext1: 0.3,
-      openings: [door([O.hallSouthDoor.x0, HL.z1], [O.hallSouthDoor.x1, HL.z1])] },
+      // handle on the left as seen from the hall, left slightly open onto a dark room
+      openings: [door([O.hallSouthDoor.x0, HL.z1], [O.hallSouthDoor.x1, HL.z1], { handle: 'end', ajar: 0.32, dark: true })] },
     { a: [HL.x1, HL.z1], b: [HL.x1, C.ARCH.wallZ], inside: hall, t: 0.25, ext0: 0.3, ext1: 0.3 },
     { a: [C.NICHE.x0, 0], b: [C.NICHE.x1, 0], inside: hall, t: 0.25, ext0: 0.3, ext1: 0.2 },
     { a: [HL.x0, C.DIAGONAL.b[1]], b: [HL.x0, 0], inside: hall, t: C.WALL_THICKNESS.inner, ext0: 0, ext1: 0.3,
@@ -68,8 +69,8 @@ function buildWall(B, M, w) {
 function floorOutline() {
   const L = C.LIVING, HL = C.HALL, P = C.PILLAR, A = C.ARCH;
   return [
-    [L.x0, L.z0], C.DIAGONAL.a, C.DIAGONAL.b, [HL.x0, 0], [P.x1, 0], [P.x1, A.wallZ - A.thickness],
-    [A.x1, A.wallZ - A.thickness], [A.x1, A.wallZ], [HL.x1, A.wallZ], [HL.x1, HL.z1], [L.x1, HL.z1],
+    [L.x0, L.z0], C.DIAGONAL.a, C.DIAGONAL.b, [HL.x0, 0], [P.x1, 0], [P.x1, A.wallZ - A.depth],
+    [A.x1, A.wallZ - A.depth], [A.x1, A.wallZ], [HL.x1, A.wallZ], [HL.x1, HL.z1], [L.x1, HL.z1],
     [L.x1, L.z1], [L.x0, L.z1],
   ];
 }
@@ -94,11 +95,18 @@ function buildSoffits(B, M) {
   const mats = [M.wallPlain, M.wallPlain, M.ceiling, M.ceiling, M.wallPlain, M.wallPlain];
   const N = C.NICHE, S = C.BEAM;
   B.box(N.x0, bot, N.z0, N.x1, top, N.z1, mats);
-  B.box(S.x0, bot, S.z0, S.x1, top, S.z1, mats);
-  // small cornice under the soffit edges
   B.box(N.x0, bot - 0.03, N.z1 - 0.05, N.x1, bot, N.z1, M.cornice);
-  B.box(S.x0, bot - 0.03, S.z0, S.x1, bot, S.z0 + 0.05, M.cornice);
-  B.box(S.x0, bot - 0.03, S.z1 - 0.05, S.x1, bot, S.z1, M.cornice);
+  // the beam's west end runs along the diagonal wall (45°): x shifts by the beam width
+  const [ax, az] = C.DIAGONAL.a;
+  const westNorth = ax + (az - S.z0);
+  const shape = new THREE.Shape([[ax, -S.z1], [S.x1, -S.z1], [S.x1, -S.z0], [westNorth, -S.z0]]
+    .map(([x, y]) => new THREE.Vector2(x, y)));
+  const g = extrudeGeo(shape, top - bot);
+  g.rotateX(-Math.PI / 2);
+  B.add(g, [M.ceiling, M.wallPlain], [0, bot, 0]);
+  // small cornice under the beam edges
+  B.box(westNorth, bot - 0.03, S.z0, S.x1, bot, S.z0 + 0.05, M.cornice);
+  B.box(ax, bot - 0.03, S.z1 - 0.05, S.x1, bot, S.z1, M.cornice);
 }
 
 // Pillar between the niche and the arch, built from boxes so that it can hold
@@ -108,7 +116,7 @@ function buildPillar(B, M) {
   const sx = P.x0 + 0.14, shelf = { z0: 0.12, z1: 0.48, y0: 0.55, y1: 2.25 };
   const vz = P.z1 - 0.14, vase = { x0: P.x0 + 0.16, x1: P.x1 - 0.06, y0: 0.95, y1: 1.6 };
   const box = (x0, y0, z0, x1, y1, z1) => B.box(x0, y0, z0, x1, y1, z1, M.wall);
-  box(sx, 0, P.z0, P.x1, H, vz);
+  box(sx, 0, C.ARCH.wallZ - C.ARCH.depth - 0.1, P.x1, H, vz);
   box(P.x0, 0, P.z0, sx, H, shelf.z0);
   box(P.x0, 0, shelf.z1, sx, H, P.z1);
   box(P.x0, 0, shelf.z0, sx, shelf.y0, shelf.z1);
@@ -118,8 +126,8 @@ function buildPillar(B, M) {
   box(vase.x0, 0, vz, vase.x1, vase.y0, P.z1);
   box(vase.x0, vase.y1, vz, vase.x1, H, P.z1);
   // glass shelves
-  for (let i = 0; i < 6; i++) {
-    const y = shelf.y0 + 0.02 + i * ((shelf.y1 - shelf.y0 - 0.04) / 5);
+  for (let i = 0; i < 5; i++) {
+    const y = shelf.y0 + 0.02 + i * ((shelf.y1 - shelf.y0) / 5);
     B.box(P.x0 + 0.005, y, shelf.z0 + 0.005, sx, y + 0.012, shelf.z1 - 0.005, M.shelfGlass, { cast: false, layer: 1 });
   }
   // pink vase on the small niche floor
@@ -129,8 +137,8 @@ function buildPillar(B, M) {
   B.add(vg, M.pinkVase, [(vase.x0 + vase.x1) / 2, vase.y0, (vz + P.z1) / 2]);
 }
 
-// Wall with a round arch over the passage to the corridor (a narrow pier on its right),
-// plus a dark dead-end corridor behind it.
+// Wall with a round arch over a 1.03 m deep passage (a narrow pier on its right).
+// The far half of the passage fades into darkness.
 function buildArch(B, M) {
   const A = C.ARCH, w = A.x1 - A.x0, r = w / 2, W = C.HALL.x1 - A.x0;
   const s = new THREE.Shape();
@@ -138,20 +146,22 @@ function buildArch(B, M) {
   s.lineTo(W, 0); s.lineTo(W, H); s.lineTo(0, H); s.lineTo(0, A.spring);
   s.absarc(r, A.spring, r, Math.PI, 0, true);
   s.closePath();
-  const g = extrudeGeo(s, A.thickness, { curveSegments: 14 });
-  g.translate(A.x0, 0, A.wallZ - A.thickness);
+  const g = extrudeGeo(s, A.depth, { curveSegments: 14 });
+  g.translate(A.x0, 0, A.wallZ - A.depth);
   B.add(g, [M.wall, M.wallPlain]);
 
-  // corridor (unlit, just a hint of depth)
-  const z0 = A.corridorEnd, z1 = A.wallZ - A.thickness;
-  B.box(A.x0 - 0.2, 0, z0 - 0.2, A.x0 + 0.005, H, z1, M.corridorWall, { cast: false, receive: false });
-  B.box(A.x1 - 0.005, 0, z0 - 0.2, A.x1 + 0.2, H, z1, M.corridorWall, { cast: false, receive: false });
-  B.box(A.x0, 0, z0 - 0.2, A.x1, H, z0, M.corridorWall, { cast: false, receive: false });
-  B.box(A.x0, -0.05, z0, A.x1, 0, z1, M.corridorFloor, { cast: false, receive: false });
-  B.box(A.x0, H, z0, A.x1, H + 0.05, z1, M.corridorWall, { cast: false, receive: false });
-  const dw = 0.8, dx = (A.x0 + A.x1) / 2;
-  B.add(boxGeo(dw, 2.05, 0.04, 'unit'), [M.corridorWall, M.corridorWall, M.corridorWall, M.corridorWall, M.corridorDoor, M.corridorDoor],
-    [dx, 1.025, z0 + 0.03], [0, 0, 0], { cast: false, receive: false });
+  // darkness: stacked translucent black cards in the shape of the opening, then solid black
+  const open = new THREE.Shape();
+  open.moveTo(0, 0); open.lineTo(w, 0); open.lineTo(w, A.spring);
+  open.absarc(r, A.spring, r, 0, Math.PI, false);
+  open.closePath();
+  const back = A.wallZ - A.depth;
+  const cards = 9, from = A.walkTo + 0.25;
+  for (let i = 0; i < cards; i++) {
+    const z = from - ((from - back) * (i + 1)) / (cards + 1);
+    B.add(new THREE.ShapeGeometry(open, 14), M.darkness, [A.x0, 0, z], [0, 0, 0], { cast: false, receive: false, layer: 1 });
+  }
+  B.add(new THREE.ShapeGeometry(open, 14), M.voidBlack, [A.x0, 0, back + 0.005], [0, 0, 0], { cast: false, receive: false });
 }
 
 // Door casing, lining and leaf for a door opening found in a wall.
@@ -179,17 +189,26 @@ function buildDoor(B, M, pl, hole, wallT, inside) {
   piece(hole.t0, hole.t0 + 0.025, 0, top, 0, wallT, M.doorWood);
   piece(hole.t1 - 0.025, hole.t1, 0, top, 0, wallT, M.doorWood);
   piece(hole.t0, hole.t1, top - 0.025, top, 0, wallT, M.doorWood);
-  // closed leaf in the middle of the wall
+  // leaf hung in the middle of the wall; in the wall frame X runs along the wall and
+  // Z points away from the room, so an ajar leaf swings towards +Z
   const lw = hole.t1 - hole.t0 - 0.05;
-  const c = toWorld((hole.t0 + hole.t1) / 2, (top - 0.03) / 2 + 0.005, wallT / 2);
-  B.boxAt(lw, top - 0.035, 0.04, c[0], c[1], c[2], rotY,
-    [M.doorWood, M.doorWood, M.doorWood, M.doorWood, M.doorLeaf, M.doorLeaf], { uv: 'unit' });
-  // lever handle on the room side
-  const hx = hole.t0 + 0.08;
-  const hp = toWorld(hx, 1.0, wallT / 2 - 0.05);
-  B.boxAt(0.035, 0.035, 0.06, hp[0], hp[1], hp[2], rotY, M.brass);
-  const lp = toWorld(hx + 0.05, 1.0, wallT / 2 - 0.085);
-  B.boxAt(0.12, 0.02, 0.02, lp[0], lp[1], lp[2], rotY, M.brass);
+  const handleAtEnd = hole.handle === 'end';
+  const sgn = handleAtEnd ? 1 : -1;                       // leaf extends from the hinge along sgn * X
+  const hingeT = handleAtEnd ? hole.t0 + 0.025 : hole.t1 - 0.025;
+  const leafMats = [M.doorWood, M.doorWood, M.doorWood, M.doorWood, M.doorLeaf, M.doorLeaf];
+  B.at(pl.start[0], 0, pl.start[1], rotY, () => {
+    B.at(hingeT, 0, wallT / 2, -sgn * (hole.ajar ?? 0), () => {
+      B.add(boxGeo(lw, top - 0.035, 0.04, 'unit'), leafMats, [sgn * lw / 2, (top - 0.03) / 2 + 0.005, 0]);
+      // lever handle on the room side
+      B.box(sgn * (lw - 0.06) - 0.0175, 0.9825, -0.08, sgn * (lw - 0.06) + 0.0175, 1.0175, -0.02, M.brass);
+      B.box(sgn * (lw - 0.11) - 0.06, 0.99, -0.095, sgn * (lw - 0.11) + 0.06, 1.01, -0.075, M.brass);
+    });
+    // a dark room behind a door that is left ajar
+    if (hole.dark) {
+      B.box(hole.t0 - 0.3, 0, wallT - 0.01, hole.t1 + 0.3, top + 0.3, wallT + 1.4, M.voidRoom,
+        { cast: false, receive: false });
+    }
+  });
 }
 
 // Tall decorative glass panel with a white frame.

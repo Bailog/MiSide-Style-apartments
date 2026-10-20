@@ -51,12 +51,12 @@ const lights = buildLighting(scene, B, M, { ...kitchenFx, ...livingFx, ...hallFx
 const effects = buildEffects(scene, lights);
 B.finalize();
 
-// walkable outline (doors are closed), the corridor behind the arch is walkable too
+// walkable outline (doors are closed); the arch passage is walkable up to where it turns dark
 const collision = new Collision();
 const A = C.ARCH;
 collision.addPolyline([
   [C.LIVING.x0, C.LIVING.z0], C.DIAGONAL.a, C.DIAGONAL.b, [C.HALL.x0, 0], [C.PILLAR.x1, 0],
-  [A.x0, A.corridorEnd], [A.x1, A.corridorEnd], [A.x1, A.wallZ], [C.HALL.x1, A.wallZ],
+  [A.x0, A.walkTo], [A.x1, A.walkTo], [A.x1, A.wallZ], [C.HALL.x1, A.wallZ],
   [C.HALL.x1, C.HALL.z1], [C.LIVING.x1, C.HALL.z1], [C.LIVING.x1, C.LIVING.z1], [C.LIVING.x0, C.LIVING.z1],
 ]);
 collision.add({ type: 'box', x0: C.PILLAR.x0, z0: 0, x1: C.PILLAR.x1, z1: C.PILLAR.z1 });

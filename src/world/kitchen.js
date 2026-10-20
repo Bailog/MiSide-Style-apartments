@@ -32,8 +32,8 @@ function lowerCabinets(B, M, colliders) {
   wt.rotateX(-Math.PI / 2);
   B.add(wt, M.countertop, [0, top - 0.04, 0]);
   // fronts: [x0, x1, kind]
-  const fronts = [[0, 0.55, 'door'], [0.55, 1.15, 'oven'], [1.15, 1.72, 'doorL'], [1.72, 2.3, 'door'],
-    [2.3, 2.8, 'doorL'], [2.8, 3.3, 'door'], [3.3, x1, 'doorL']];
+  const fronts = [[0, 0.55, 'door'], [0.55, 1.15, 'oven'], [1.15, 1.7, 'doorL'], [1.7, sinkL, 'door'],
+    [sinkL, sinkR, 'door'], [sinkR, x1, 'doorL']];
   for (const [a, b, kind] of fronts) {
     const mat = kind === 'oven' ? M.oven : kind === 'doorL' ? M.cabinetDoorL : M.cabinetDoor;
     B.add(boxGeo(b - a - 0.006, 0.66, 0.02, 'unit'), faces(M.cherry, { nz: mat }),
@@ -70,19 +70,32 @@ function cooking(B, M) {
 }
 
 function upperCabinets(B, M) {
-  const z0 = L.z1 - K.upperDepth, y0 = K.upperY0, y1 = K.upperY1, x1 = K.counterX1;
-  const runs = [[0, K.hob.x0 - 0.05], [K.hob.x1 + 0.05, x1]];
+  const D = K.upperDepth, z0 = L.z1 - D, y0 = K.upperY0, y1 = K.upperY1, x1 = K.counterX1;
+  const xa = x1 - D;                       // where the angled corner cabinet starts
+  const runs = [[0, K.hob.x0 - 0.05], [K.hob.x1 + 0.05, xa]];
   for (const [a, b] of runs) {
     B.box(a, y0, z0, b, y1, L.z1, M.cherry);
     B.box(a - 0.01, y1, z0 - 0.04, b + 0.01, y1 + 0.07, L.z1, M.cherry);   // crown
   }
-  // the last one, above the sink at the end of the run, has leaded glass (photo 2.4)
   const doors = [[0, K.hob.x0 - 0.05, M.upperDoor], [K.hob.x1 + 0.05, 1.65, M.upperDoor], [1.65, 2.1, M.upperGlass],
-    [2.1, 2.55, M.upperGlass], [2.55, 2.95, M.upperDoor], [2.95, 3.35, M.upperDoor], [3.35, x1, M.upperLeaded]];
+    [2.1, 2.55, M.upperGlass], [2.55, (2.55 + xa) / 2, M.upperDoor], [(2.55 + xa) / 2, xa, M.upperDoor]];
   for (const [a, b, mat] of doors) {
     B.add(boxGeo(b - a - 0.006, y1 - y0 - 0.01, 0.02, 'unit'), faces(M.cherry, { nz: mat }),
       [(a + b) / 2, (y0 + y1) / 2, z0 - 0.01]);
   }
+  // corner cabinet at the end of the run, its leaded-glass door at 45° to the wall (photo 2.4)
+  const prism = (pts, ya, yb) => {
+    const sh = new THREE.Shape(pts.map(([x, z]) => new THREE.Vector2(x, -z)));
+    const g = extrudeGeo(sh, yb - ya);
+    g.rotateX(-Math.PI / 2);
+    B.add(g, M.cherry, [0, ya, 0]);
+  };
+  prism([[xa, z0], [xa, L.z1], [x1, L.z1]], y0, y1);
+  prism([[xa - 0.01, z0 - 0.04], [xa - 0.01, L.z1], [x1 + 0.04, L.z1]], y1, y1 + 0.07);
+  const dl = D * Math.SQRT2, n = 0.011 / Math.SQRT2;
+  B.at(xa + D / 2 + n, (y0 + y1) / 2, z0 + D / 2 - n, (3 * Math.PI) / 4, () => {
+    B.add(boxGeo(dl - 0.01, y1 - y0 - 0.01, 0.02, 'unit'), faces(M.cherry, { pz: M.upperLeaded }), [0, 0, 0]);
+  });
   // mosaic backsplash between the counter and the cabinets
   const yb0 = K.counterTop, yb1 = y0, z = L.z1 - 0.002;
   B.add(quadGeo([x1, yb0, z], [0, yb0, z], [0, yb1, z], [x1, yb1, z], [[x1, 0], [0, 0], [0, yb1 - yb0], [x1, yb1 - yb0]]),
@@ -113,7 +126,7 @@ function bar(B, M, colliders) {
   colliders.push({ type: 'circle', x: px, z: pz, r: 0.04 });
 }
 
-// 37" TV on a black glass stand with chrome legs, facing the sofa (photo 2.2).
+// 37" TV on the black glass table (1.2 m) with chrome legs east of the bar, facing the sofa (photo 2.2).
 function tv(B, M, colliders) {
   const T = K.tvStand, z1 = L.z1 - 0.03, z0 = z1 - T.depth, h = T.height;
   const xc = (T.x0 + T.x1) / 2, zc = (z0 + z1) / 2;

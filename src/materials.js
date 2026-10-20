@@ -131,6 +131,7 @@ export function createMaterials() {
     paintingKlimt: toon({ map: imageTexture(IMG.klimt) }),
 
     deskWood: toon({ map: T.woodGrain([18, 42, 18], 91, 0.9) }),
+    deskDoor: toon({ map: T.cabinetFront({ base: [18, 42, 18], knob: 'right' }) }),
     deskMat: toon({ map: T.deskMat() }),
     keyboard: toon({ map: kbTex, emissiveMap: kbTex, emissive: '#ffffff', emissiveIntensity: 1.4 }),
     monitorScreen: emissiveMat(T.monitorScreen(), '#ffffff', 0.85),
@@ -162,9 +163,9 @@ export function createMaterials() {
     aoCeil: shadeMat(fade, 0.35),
     blobShadow: shadeMat(T.softRect(), 0.6),
 
-    corridorWall: new THREE.MeshBasicMaterial({ color: '#1a1326' }),
-    corridorFloor: new THREE.MeshBasicMaterial({ color: '#130d1c' }),
-    corridorDoor: new THREE.MeshBasicMaterial({ map: doorTex, color: '#2a1f30' }),
+    darkness: new THREE.MeshBasicMaterial({ color: '#000000', transparent: true, opacity: 0.24, depthWrite: false, side: THREE.DoubleSide }),
+    voidBlack: new THREE.MeshBasicMaterial({ color: '#000000', side: THREE.DoubleSide }),
+    voidRoom: new THREE.MeshBasicMaterial({ color: '#030206', side: THREE.BackSide }),
   };
   return M;
 }

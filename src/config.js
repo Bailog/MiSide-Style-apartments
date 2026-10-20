@@ -36,18 +36,19 @@ export const NICHE = { x0: HALL.x0, x1: HALL.x0 + 1.83, z0: 0, z1: 0.82 };
 // Pillar between the niche and the arch, with two decorative niches in it
 export const PILLAR = { x0: NICHE.x1, x1: NICHE.x1 + 0.40, z0: 0, z1: NICHE.z1 };
 
-// Arch passage to the corridor (the 1.04 m box on the scheme)
+// Arch passage (the 1.04 m box on the scheme): 1.03 m deep (measured), ending in darkness
 export const ARCH = {
   x0: PILLAR.x1, x1: HALL.x1 - 0.12,   // 0.12 of wall on the right side (measured)
   wallZ: NICHE.z1,                     // front face of the arch wall
-  thickness: 0.30,
+  depth: 1.03,                         // (measured)
   spring: 2.05,                        // height where the round top starts
-  corridorEnd: -1.90,                  // dead end of the (not photographed) corridor
+  walkTo: 0.15,                        // the player cannot go deeper than this (into the dark)
 };
 
-// Lowered-ceiling beam over the opening between the kitchen and the hall:
-// 0.41 x 2.24 (measured), flush with the hall wall, sitting on the kitchen side
-export const BEAM = { x0: DIAGONAL.a[0], x1: LIVING.x1, z0: LIVING.z0, z1: LIVING.z0 + 0.41 };
+// Lowered-ceiling beam over the opening between the kitchen and the hall, 0.41 x 2.24 (measured).
+// It sits on the hall side: its kitchen face is flush with the kitchen's north wall and runs
+// 2.24 m from the corner of the diagonal wall to the east wall; its west end follows the diagonal.
+export const BEAM = { x0: DIAGONAL.a[0], x1: LIVING.x1, z0: LIVING.z0 - 0.41, z1: LIVING.z0 };
 
 export const DOOR = { height: 2.16, leafWidth: 0.78, casing: 0.07 };   // (measured)
 const DOOR_OPENING = DOOR.leafWidth + 0.05;
@@ -66,16 +67,20 @@ export const OPENINGS = {
 
 export const WALL_THICKNESS = { inner: 0.14, outer: 0.45 };
 
+// The worktop runs along the south wall and ends with the bar turning towards the room;
+// east of the bar stands the glass TV table, 1.2 m wide (measured).
+const TV_TABLE_W = 1.2;
+const BAR_X1 = LIVING.x1 - TV_TABLE_W;
 export const KITCHEN = {
   counterTop: 0.85,                    // (measured)
   counterDepth: 0.60,                  // (measured)
-  counterX1: 3.80,                     // the counter ends at the glass TV stand
+  counterX1: BAR_X1,                   // the worktop ends with the bar
   upperY0: 1.45, upperY1: 2.35, upperDepth: 0.34,
   hob: { x0: 0.55, x1: 1.15 },
-  sinkX: 3.38,                         // between the bar and the TV stand (photo 2.2, 2.4)
-  bar: { x0: 2.60, x1: 3.10, z0: LIVING.z0 + 1.32 },   // peninsula from the counter towards the room
-  pole: [2.85, LIVING.z0 + 1.50],
-  tvStand: { x0: 3.86, x1: 4.66, depth: 0.45, height: 0.5 },
+  sinkX: BAR_X1 - 0.95,                // west of the bar
+  bar: { x0: BAR_X1 - 0.5, x1: BAR_X1, z0: LIVING.z0 + 1.32 },   // peninsula towards the room
+  pole: [BAR_X1 - 0.25, LIVING.z0 + 1.50],
+  tvStand: { x0: BAR_X1 + 0.02, x1: LIVING.x1 - 0.02, depth: 0.45, height: 0.5 },
 };
 
 export const FRIDGE = { x0: 0, x1: 0.60, z0: LIVING.z0, z1: LIVING.z0 + 0.60, h: 1.78 };   // (measured)

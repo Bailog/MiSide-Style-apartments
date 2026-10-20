@@ -63,10 +63,10 @@ export function starField(seed = 7, size = 1024, tile = 2.4) {
   const GB = new Uint8Array(size * size * 2);
   const pxPerM = size / tile;
   const stars = [];
-  // big sparkles first, then small ones, then dots; each keeps a small gap to its neighbours
+  // big sparkles first, then small ones, then dots; no two stars are closer than 0.2 m
   // (distances wrap around the tile edges so the pattern stays seamless)
-  const counts = [[9, 'big'], [36, 'spark'], [150, 'dot']];
-  const gap = 0.035 * pxPerM;
+  const counts = [[9, 'big'], [32, 'spark'], [200, 'dot']];
+  const minStep = 0.2 * pxPerM;
   const wrapDist = (ax, ay, bx, by) => {
     const dx = Math.abs(ax - bx), dy = Math.abs(ay - by);
     return Math.hypot(Math.min(dx, size - dx), Math.min(dy, size - dy));
@@ -74,11 +74,10 @@ export function starField(seed = 7, size = 1024, tile = 2.4) {
   for (const [n, kind] of counts) {
     for (let i = 0; i < n; i++) {
       const rad = (kind === 'dot' ? 0.006 + r() * 0.006 : kind === 'spark' ? 0.03 + r() * 0.02 : 0.055 + r() * 0.03) * pxPerM;
-      const reach = rad * (kind === 'dot' ? 2.2 : 1.0);
-      for (let attempt = 0; attempt < 40; attempt++) {
+      for (let attempt = 0; attempt < 60; attempt++) {
         const x = r() * size, y = r() * size;
-        if (stars.every((o) => wrapDist(x, y, o.x, o.y) > reach + o.reach + gap)) {
-          stars.push({ kind, x, y, rad, reach, phase: r(), speed: r(), b: 0.55 + r() * 0.45 });
+        if (stars.every((o) => wrapDist(x, y, o.x, o.y) >= minStep)) {
+          stars.push({ kind, x, y, rad, phase: r(), speed: r(), b: 0.55 + r() * 0.45 });
           break;
         }
       }

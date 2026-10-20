@@ -7,30 +7,37 @@ import { blob } from './common.js';
 const faces = (base, o) => ['px', 'nx', 'py', 'ny', 'pz', 'nz'].map((k) => o[k] ?? base);
 const N = C.NICHE;
 
-// Dark wooden desk filling the computer niche, drawers on the right (photo 1, 5).
+// Dark wooden desk in the computer niche (photo 1, 2, 5): a 0.4 m cupboard on the left,
+// drawers on the right, and 0.2 m of free space between its right end and the pillar.
+const DESK = { x0: N.x0 + 0.005, x1: N.x1 - 0.2, z0: 0.02, z1: 0.72, top: 0.75 };
+
 function desk(B, M, colliders) {
-  const x0 = N.x0 + 0.02, x1 = N.x1 - 0.02, z0 = 0.02, z1 = 0.72, top = 0.75;
+  const { x0, x1, z0, z1, top } = DESK;
   B.box(x0, top - 0.04, z0, x1, top, z1, M.deskWood);
-  B.box(x0, 0, z0 + 0.02, x0 + 0.04, top - 0.04, z1 - 0.02, M.deskWood);
-  const px0 = x1 - 0.52;
+  // left cupboard with a door
+  const lx1 = x0 + 0.4;
+  B.box(x0, 0, z0 + 0.02, lx1, top - 0.04, z1 - 0.02, M.deskWood);
+  B.add(boxGeo(0.38, top - 0.1, 0.02, 'unit'), faces(M.deskWood, { pz: M.deskDoor }), [(x0 + lx1) / 2, (top - 0.04) / 2 + 0.01, z1 - 0.01]);
+  // right pedestal with three drawers
+  const px0 = x1 - 0.45;
   B.box(px0, 0, z0 + 0.02, x1, top - 0.04, z1 - 0.02, M.deskWood);
   for (const [y0, y1] of [[0.04, 0.24], [0.26, 0.46], [0.48, 0.68]]) {
-    B.add(boxGeo(0.48, y1 - y0, 0.02, 'unit'), faces(M.deskWood, { pz: M.drawer }), [(px0 + x1) / 2, (y0 + y1) / 2, z1 - 0.01]);
+    B.add(boxGeo(0.42, y1 - y0, 0.02, 'unit'), faces(M.deskWood, { pz: M.drawer }), [(px0 + x1) / 2, (y0 + y1) / 2, z1 - 0.01]);
   }
-  B.add(boxGeo(px0 - x0 - 0.1, 0.08, 0.02, 'unit'), faces(M.deskWood, { pz: M.drawer }), [(x0 + px0) / 2 + 0.02, top - 0.09, z1 - 0.03]);
-  B.box(x0 + 0.04, 0.3, z0 + 0.02, px0, top - 0.04, z0 + 0.05, M.deskWood);
-  colliders.push({ type: 'box', x0: N.x0, z0: 0, x1: N.x1, z1 });
+  B.add(boxGeo(px0 - lx1 - 0.06, 0.08, 0.02, 'unit'), faces(M.deskWood, { pz: M.drawer }), [(lx1 + px0) / 2, top - 0.09, z1 - 0.03]);
+  B.box(lx1, 0.3, z0 + 0.02, px0, top - 0.04, z0 + 0.05, M.deskWood);
+  colliders.push({ type: 'box', x0: N.x0, z0: 0, x1, z1 });
   blob(B, M, x0, z0, x1, z1);
   return top;
 }
 
 function computer(B, M, top) {
   // PC case on the left end, glass front with RGB fans and a blue LED strip
-  const cx0 = N.x0 + 0.07, cx1 = cx0 + 0.24, cz0 = 0.12, cz1 = 0.58;
+  const cx0 = DESK.x0 + 0.065, cx1 = cx0 + 0.24, cz0 = 0.12, cz1 = 0.58;
   B.add(boxGeo(cx1 - cx0, 0.52, cz1 - cz0, 'unit'), faces(M.pcBody, { pz: M.pcFront }), [(cx0 + cx1) / 2, top + 0.26, (cz0 + cz1) / 2]);
   B.rod([cx1 - 0.04, top + 0.52, 0.2], [cx1 - 0.04, top + 0.66, 0.2], 0.006, M.blackPlastic);
-  // monitor
-  const mx = 4.05, mz = 0.24;
+  // monitor over the knee space
+  const mx = (DESK.x0 + 0.4 + DESK.x1 - 0.45) / 2, mz = 0.24;
   B.box(mx - 0.13, top, mz - 0.09, mx + 0.13, top + 0.012, mz + 0.09, M.blackPlastic);
   B.box(mx - 0.025, top, mz - 0.03, mx + 0.025, top + 0.34, mz, M.blackPlastic);
   B.box(mx - 0.32, top + 0.2, mz, mx + 0.32, top + 0.585, mz + 0.03, M.blackPlastic);
@@ -38,25 +45,26 @@ function computer(B, M, top) {
   B.add(quadGeo([mx - sw, sy - sh, szf], [mx + sw, sy - sh, szf], [mx + sw, sy + sh, szf], [mx - sw, sy + sh, szf]),
     M.monitorScreen, [0, 0, 0], [0, 0, 0], { cast: false });
   // speakers
-  for (const sx of [3.66, 4.47]) {
+  for (const sx of [mx - 0.42, mx + 0.42]) {
     B.box(sx - 0.06, top, 0.13, sx + 0.06, top + 0.2, 0.28, M.blackPlastic);
     const cone = new THREE.CylinderGeometry(0.035, 0.035, 0.004, 14);
     cone.rotateX(Math.PI / 2);
     B.add(cone, M.darkSteel, [sx, top + 0.08, 0.282], [0, 0, 0], { cast: false });
   }
   // desk mat, keyboard and mouse
-  B.add(boxGeo(1.05, 0.004, 0.4, 'unit'), faces(M.blackPlastic, { py: M.deskMat }), [4.12, top + 0.002, 0.5], [0, 0, 0], { cast: false });
-  B.add(boxGeo(0.44, 0.024, 0.14, 'unit'), faces(M.blackPlastic, { py: M.keyboard }), [3.98, top + 0.016, 0.52], [0, 0.03, 0]);
-  B.add(roundedBoxGeo(0.065, 0.035, 0.11, 0.02), M.blackPlastic, [4.38, top + 0.022, 0.53]);
-  B.box(4.372, top + 0.03, 0.49, 4.388, top + 0.041, 0.505, M.ledStripCool, { cast: false });
+  B.add(boxGeo(1.0, 0.004, 0.4, 'unit'), faces(M.blackPlastic, { py: M.deskMat }), [mx + 0.08, top + 0.002, 0.5], [0, 0, 0], { cast: false });
+  B.add(boxGeo(0.44, 0.024, 0.14, 'unit'), faces(M.blackPlastic, { py: M.keyboard }), [mx - 0.05, top + 0.016, 0.52], [0, 0.03, 0]);
+  const mox = mx + 0.34;
+  B.add(roundedBoxGeo(0.065, 0.035, 0.11, 0.02), M.blackPlastic, [mox, top + 0.022, 0.53]);
+  B.box(mox - 0.008, top + 0.03, 0.49, mox + 0.008, top + 0.041, 0.505, M.ledStripCool, { cast: false });
   // microphone on a boom arm
-  const bx = N.x1 - 0.12;
+  const bx = DESK.x1 - 0.08;
   B.box(bx - 0.03, top, 0.05, bx + 0.03, top + 0.05, 0.11, M.blackPlastic);
   B.rod([bx, top + 0.05, 0.08], [bx, top + 0.42, 0.1], 0.011, M.blackPlastic);
   B.rod([bx, top + 0.42, 0.1], [bx - 0.26, top + 0.56, 0.22], 0.011, M.blackPlastic);
   B.rod([bx - 0.26, top + 0.56, 0.22], [bx - 0.4, top + 0.46, 0.3], 0.011, M.blackPlastic);
   B.rod([bx - 0.4, top + 0.46, 0.3], [bx - 0.47, top + 0.41, 0.35], 0.022, M.blackPlastic);
-  return { monitor: [mx, sy, szf + 0.25], pc: [cx1 + 0.05, top + 0.25, cz1 + 0.05] };
+  return { monitor: [mx, sy, szf + 0.25], pc: [cx1 + 0.05, top + 0.25, cz1 + 0.05], deskCenter: mx };
 }
 
 // White cantilever office chair with a colourful cushion; built facing -Z.
@@ -124,8 +132,8 @@ export function buildHall(B, M, colliders) {
   const top = desk(B, M, colliders);
   const fx = computer(B, M, top);
   // Klimt print above the desk
-  B.add(boxGeo(0.4, 0.56, 0.022, 'unit'), faces(M.canvasSide, { pz: M.paintingKlimt }), [4.25, 1.84, 0.012]);
-  const chair = { x: 4.02, z: 1.12, rot: 0.18 };
+  B.add(boxGeo(0.4, 0.56, 0.022, 'unit'), faces(M.canvasSide, { pz: M.paintingKlimt }), [fx.deskCenter + 0.22, 1.84, 0.012]);
+  const chair = { x: fx.deskCenter, z: 1.12, rot: 0.18 };
   B.at(chair.x, 0, chair.z, chair.rot, () => officeChair(B, M));
   colliders.push({ type: 'circle', x: chair.x, z: chair.z, r: 0.3 });
   blob(B, M, chair.x - 0.26, chair.z - 0.26, chair.x + 0.26, chair.z + 0.3);

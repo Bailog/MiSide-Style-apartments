@@ -51,7 +51,7 @@ export function buildLighting(scene, B, M, fx, quality) {
 
   // moonlight through the window, casting the frame and blind stripes onto the floor
   const W = C.OPENINGS.window, wz = (W.z0 + W.z1) / 2;
-  const moon = spot(scene, '#9fb8ff', 85, [-2.4, 3.3, wz - 0.25], [2.4, 0, wz + 0.05], 0.42, 0.55, 0);
+  const moon = spot(scene, '#9fb8ff', 60, [-2.4, 3.3, wz - 0.25], [2.4, 0, wz + 0.05], 0.42, 0.55, 0);
   moon.castShadow = true;
   moon.shadow.mapSize.set(2048, 2048);
   moon.shadow.camera.near = 1;
@@ -83,7 +83,7 @@ export function buildLighting(scene, B, M, fx, quality) {
   }
   // two spots in the beam over the kitchen opening
   const bz = (C.BEAM.z0 + C.BEAM.z1) / 2;
-  for (const x of [3.15, 4.05]) {
+  for (const x of [3.4, 4.2]) {
     downlight(B, M, x, bz);
     spot(scene, WARM_SPOT, 2.4, [x, C.SOFFIT_BOTTOM - 0.02, bz], [x, 0, bz + 0.1], 0.75, 0.7, 4.5);
   }
@@ -92,11 +92,11 @@ export function buildLighting(scene, B, M, fx, quality) {
   spot(scene, '#ffd29a', 2.6, fx.sofaLamp.pos, fx.sofaLamp.target, 0.75, 0.8, 2.6);
   spot(scene, '#ffd29a', 1.8, fx.leopardLamp.pos, fx.leopardLamp.target, 0.75, 0.8, 2.2);
 
-  // faint bounce of the moonlight so the dark kitchen never turns pitch black
-  point(scene, '#8a8cff', 1.4, [2.0, 1.9, (C.LIVING.z0 + C.LIVING.z1) / 2 + 0.3], 4.5);
+  // very faint bounce of the moonlight so the dark kitchen never turns pitch black
+  point(scene, '#7c80ff', 0.5, [2.0, 1.9, (C.LIVING.z0 + C.LIVING.z1) / 2 + 0.3], 4);
 
   // cold glow of the TV over the sofa corner
-  point(scene, '#9db4ff', 1.1, fx.tvGlow, 2.6);
+  point(scene, '#9db4ff', 0.8, fx.tvGlow, 2.4);
 
   // screen glow and RGB from the PC
   point(scene, '#a9b8ff', 0.9, fx.monitor, 2.2);
