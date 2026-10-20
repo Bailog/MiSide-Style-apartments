@@ -21,6 +21,7 @@ export class Collision {
 
   // Closed polyline, e.g. the outline of the walkable area.
   addPolyline(points, closed = true) {
+    if (closed) this.bounds = points;
     const n = points.length;
     for (let i = 0; i < (closed ? n : n - 1); i++) this.addSegment(points[i], points[(i + 1) % n]);
   }
@@ -43,11 +44,14 @@ export class Collision {
       for (const b of this.boxes) {
         const inside = p.x > b.x0 && p.x < b.x1 && p.z > b.z0 && p.z < b.z1;
         if (inside) {
-          // center ended up inside a box: leave through the nearest side
-          const d = [p.x - b.x0, b.x1 - p.x, p.z - b.z0, b.z1 - p.z];
-          const m = Math.min(...d);
-          if (m === d[0]) p.x = b.x0 - r; else if (m === d[1]) p.x = b.x1 + r;
-          else if (m === d[2]) p.z = b.z0 - r; else p.z = b.z1 + r;
+          // center ended up inside a box (e.g. after a teleport): leave through the
+          // nearest side that is still inside the walkable area
+          const exits = [
+            [p.x - b.x0, b.x0 - r, p.z], [b.x1 - p.x, b.x1 + r, p.z],
+            [p.z - b.z0, p.x, b.z0 - r], [b.z1 - p.z, p.x, b.z1 + r],
+          ].sort((u, v) => u[0] - v[0]);
+          const ok = exits.find(([, x, z]) => this.contains(x, z)) ?? exits[0];
+          p.x = ok[1]; p.z = ok[2];
           moved = true;
           continue;
         }
@@ -68,6 +72,18 @@ export class Collision {
       if (!moved) break;
     }
     return hit;
+  }
+
+  // Point-in-polygon test against the outline (true if no outline was set).
+  contains(x, z) {
+    const P = this.bounds;
+    if (!P) return true;
+    let inside = false;
+    for (let i = 0, j = P.length - 1; i < P.length; j = i++) {
+      const [xi, zi] = P[i], [xj, zj] = P[j];
+      if ((zi > z) !== (zj > z) && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) inside = !inside;
+    }
+    return inside;
   }
 
   #push(p, cx, cz, r) {

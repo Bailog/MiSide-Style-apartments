@@ -106,6 +106,7 @@ export function createMaterials() {
     acBody: toon({ color: '#f3f3f1' }),
 
     tableWood: toon({ map: T.woodGrain([20, 55, 34], 81, 0.6) }),
+    rug: toon({ map: T.rug() }),
     tablecloth: toon({ map: T.roses() }),
     chairFabric: toon({ color: '#efe3cc' }),
 

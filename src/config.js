@@ -74,4 +74,4 @@ export const KITCHEN = {
 
 export const SOFA = { x0: 3.80, x1: LIVING.x1, z0: 3.42, z1: 5.52 };
 
-export const START = { x: 3.55, z: 2.55, yaw: -2.45, pitch: -0.06 };
+export const START = { x: 3.55, z: 2.55, yaw: -0.75, pitch: -0.05 };

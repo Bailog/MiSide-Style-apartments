@@ -227,7 +227,7 @@ function buildWindow(B, M) {
   // sky backdrop far behind the glass
   const sky = new THREE.PlaneGeometry(8, 4);
   sky.rotateY(Math.PI / 2);
-  B.add(sky, M.sky, [-2.6, 1.62, 3.88], [0, 0, 0], { cast: false, receive: false, layer: 1 });
+  B.add(sky, M.sky, [-2.6, 1.9, 4.16], [0, 0, 0], { cast: false, receive: false, layer: 1 });
   // wide sill joined to the kitchen counter, radiator below
   const kt = C.KITCHEN.counterTop;
   B.box(xf + 0.04, kt - 0.04, z0 - 0.1, 0.32, kt, C.LIVING.z1 - C.KITCHEN.counterDepth, M.countertop);

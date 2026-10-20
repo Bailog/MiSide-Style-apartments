@@ -23,11 +23,11 @@ function point(scene, color, intensity, pos, distance) {
 }
 
 // MiSide-style cone pendant lamp; returns the bulb position.
-function pendant(B, M, x, z, drop = 0.58) {
+function pendant(B, M, x, z, drop = 0.52) {
   const y = C.CEILING - drop;
   B.cyl(x, z, C.CEILING - 0.02, C.CEILING, 0.06, M.cord, 12, { cast: false });
   B.cyl(x, z, y + 0.2, C.CEILING, 0.006, M.cord, 6, { cast: false });
-  const shade = new THREE.CylinderGeometry(0.07, 0.22, 0.26, 20, 1, true);
+  const shade = new THREE.CylinderGeometry(0.065, 0.19, 0.24, 20, 1, true);
   B.add(shade, M.lampShade, [x, y + 0.08, z], [0, 0, 0], { cast: false });
   B.add(shade.clone(), M.lampInner, [x, y + 0.08, z], [0, 0, 0], { cast: false });
   B.cyl(x, z, y + 0.2, y + 0.24, 0.07, M.lampShade, 16, { cast: false });

@@ -71,10 +71,11 @@ const player = new Player(camera, renderer.domElement, collision, start);
 
 // --- post-processing & quality -------------------------------------------
 const post = new PostFX(renderer, scene, camera);
-let quality = params.get('q') || savedQuality() || 'high';
-if (!QUALITY.includes(quality)) quality = 'high';
+const chosenQuality = params.get('q') || savedQuality();
+let quality = QUALITY.includes(chosenQuality) ? chosenQuality : 'high';
+let autoQuality = !QUALITY.includes(chosenQuality);   // no explicit choice yet: adapt to the GPU
 
-function applyQuality(q) {
+function applyQuality(q, { byUser = false } = {}) {
   quality = q;
   const shadows = q !== 'low';
   lights.minor.forEach((l) => { l.visible = q !== 'low'; });
@@ -86,7 +87,38 @@ function applyQuality(q) {
   post.setQuality(q);
   resize();
   document.querySelectorAll('[data-quality]').forEach((b) => b.classList.toggle('on', b.dataset.quality === q));
-  storeQuality(q);
+  if (byUser) {
+    autoQuality = false;
+    storeQuality(q);
+  }
+}
+
+const QUALITY_NAMES = { low: 'низкое', medium: 'среднее', high: 'высокое' };
+const toast = document.getElementById('toast');
+let toastTimer = 0;
+function showToast(text) {
+  toast.textContent = text;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 3500);
+}
+
+// While walking, measure the frame rate for a few seconds; if it is too low, step quality down.
+const probe = { t: 0, frames: 0 };
+function probeQuality(dt) {
+  if (!autoQuality || !player.active || quality === 'low') return;
+  probe.t += dt;
+  if (probe.t < 1.5) return;                 // let shaders and caches settle first
+  probe.frames++;
+  if (probe.t < 5.5) return;
+  const fps = probe.frames / (probe.t - 1.5);
+  probe.t = 0; probe.frames = 0;
+  if (fps < 28) {
+    applyQuality(QUALITY[QUALITY.indexOf(quality) - 1]);
+    showToast(`Качество: ${QUALITY_NAMES[quality]} (G — изменить)`);
+  } else {
+    autoQuality = false;
+  }
 }
 
 function resize() {
@@ -120,10 +152,13 @@ player.onLockChange = (locked) => {
 };
 document.querySelectorAll('[data-quality]').forEach((b) => b.addEventListener('click', (e) => {
   e.stopPropagation();
-  applyQuality(b.dataset.quality);
+  applyQuality(b.dataset.quality, { byUser: true });
 }));
 window.addEventListener('keydown', (e) => {
-  if (e.code === 'KeyG') applyQuality(QUALITY[(QUALITY.indexOf(quality) + 1) % QUALITY.length]);
+  if (e.code === 'KeyG') {
+    applyQuality(QUALITY[(QUALITY.indexOf(quality) + 1) % QUALITY.length], { byUser: true });
+    showToast(`Качество: ${QUALITY_NAMES[quality]}`);
+  }
   if (e.code === 'KeyH') hud.classList.toggle('collapsed');
   if (e.code === 'KeyP') console.log(`view=${player.pos.x.toFixed(2)},${player.pos.z.toFixed(2)},${player.yaw.toFixed(2)},${player.pitch.toFixed(2)}`);
 });
@@ -143,9 +178,16 @@ function frame() {
   player.update(dt);
   effects.update(elapsed);
   post.render(elapsed);
+  probeQuality(dt);
   frames++; fpsT += dt;
   if (fpsT > 0.5) { fpsEl.textContent = `${Math.round(frames / fpsT)} fps`; frames = 0; fpsT = 0; }
 }
+
+// compile shaders up front (in parallel where the browser supports it), then allow entering
+renderer.compileAsync(scene, camera).catch(() => {}).then(() => {
+  startBtn.disabled = false;
+  if (startBtn.textContent === 'Загрузка…') startBtn.textContent = 'Войти';
+});
 
 if (params.has('still')) {
   // for automated screenshots: render a few frames and signal readiness

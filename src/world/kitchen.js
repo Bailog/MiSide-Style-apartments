@@ -145,6 +145,11 @@ function dining(B, M, colliders) {
   blob(B, M, 0.97, 4.09, 1.39, 4.51);
 }
 
+function rug(B, M) {
+  const x0 = 0.55, x1 = 2.95, z0 = 4.98, z1 = L.z1 - K.counterDepth - 0.04;
+  B.add(boxGeo(x1 - x0, 0.008, z1 - z0, 'unit'), faces(M.rug, {}), [(x0 + x1) / 2, 0.007, (z0 + z1) / 2], [0, 0, 0], { cast: false });
+}
+
 function airConditioner(B, M) {
   B.add(roundedBoxGeo(0.82, 0.29, 0.21, 0.05), M.acBody, [0.72, 2.6, L.z0 + 0.11]);
   B.box(0.36, 2.47, L.z0 + 0.2, 1.08, 2.49, L.z0 + 0.215, M.darkSteel, { cast: false });
@@ -158,6 +163,7 @@ export function buildKitchen(B, M, colliders) {
   tv(B, M);
   fridge(B, M, colliders);
   dining(B, M, colliders);
+  rug(B, M);
   airConditioner(B, M);
   return {
     underCabinet: [1.9, 1.38, L.z1 - 0.25],

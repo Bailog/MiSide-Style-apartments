@@ -515,10 +515,13 @@ export function nightSky(seed = 47) {
     g.fillStyle = `rgba(255,255,255,${r() * 0.9})`;
     const s = r() * 2 + 0.6; g.fillRect(r() * 1024, r() * 360, s, s);
   }
+  const halo = g.createRadialGradient(430, 250, 30, 430, 250, 120);
+  halo.addColorStop(0, 'rgba(255,240,200,0.45)'); halo.addColorStop(1, 'rgba(255,240,200,0)');
+  g.fillStyle = halo; g.fillRect(300, 120, 260, 260);
   g.fillStyle = '#fff7d6';
-  g.beginPath(); g.arc(420, 120, 46, 0, 7); g.fill();
-  g.fillStyle = 'rgba(255,247,214,0.18)';
-  g.beginPath(); g.arc(420, 120, 80, 0, 7); g.fill();
+  g.beginPath(); g.arc(430, 250, 38, 0, 7); g.fill();
+  g.fillStyle = 'rgba(200,190,230,0.35)';
+  for (const [x, y, r] of [[418, 238, 8], [445, 262, 6], [432, 270, 4]]) { g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); }
   // distant houses
   for (let i = 0; i < 18; i++) {
     const x = i * 60 + r() * 20, h = 60 + r() * 120;
@@ -598,6 +601,24 @@ export function curtainFabric(base = [28, 30, 55], seed = 53) {
     g.beginPath(); g.arc(x, y, 8 + r() * 10, 0, 4); g.stroke();
   }
   return toTexture(c, { tile: 0.8 });
+}
+
+// Dark green runner rug in front of the kitchen counter (photo 3, 4); 0..1 UVs.
+export function rug(seed = 59) {
+  const [c, g] = canvas(512, 160);
+  const r = rng(seed);
+  g.fillStyle = '#1f3b33'; g.fillRect(0, 0, 512, 160);
+  for (let i = 0; i < 1800; i++) {
+    g.fillStyle = `rgba(${r() > 0.5 ? '120,170,140' : '10,25,20'},0.18)`;
+    g.fillRect(r() * 512, r() * 160, 2, 2);
+  }
+  g.strokeStyle = '#6d8f6a'; g.lineWidth = 6; g.strokeRect(12, 12, 488, 136);
+  g.strokeStyle = '#c9b77e'; g.lineWidth = 2; g.strokeRect(22, 22, 468, 116);
+  g.strokeStyle = 'rgba(201,183,126,0.45)'; g.lineWidth = 2;
+  for (let x = 40; x < 480; x += 40) {
+    g.beginPath(); g.moveTo(x, 80); g.lineTo(x + 20, 50); g.lineTo(x + 40, 80); g.lineTo(x + 20, 110); g.closePath(); g.stroke();
+  }
+  return toTexture(c);
 }
 
 export function tvScreen() {

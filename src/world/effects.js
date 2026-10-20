@@ -8,7 +8,7 @@ function lightShafts(scene, moon) {
   const dir = moon.target.position.clone().sub(moon.position).normalize();
   const tex = T.shaftTexture();
   const mat = new THREE.MeshBasicMaterial({
-    color: '#7f97ff', map: tex, transparent: true, opacity: 0.16,
+    color: '#8aa0ff', map: tex, transparent: true, opacity: 0.24,
     blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false,
   });
   const zm = (W.z0 + W.z1) / 2;

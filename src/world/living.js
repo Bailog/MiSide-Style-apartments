@@ -70,10 +70,10 @@ export function buildLiving(B, M, colliders) {
   // big dark painting above the sofa, with its picture light
   const wallX = C.LIVING.x1, pz = (C.SOFA.z0 + C.SOFA.z1) / 2;
   B.at(wallX, 0, pz, -Math.PI / 2, () => {
-    painting(B, M, 1.4, 0.75, 1.82, M.paintingSofa, M.frameSilver, 0.045);
-    pictureLamp(B, M, 2.32, 0.42);
+    painting(B, M, 1.6, 0.86, 1.8, M.paintingSofa, M.frameSilver, 0.045);
+    pictureLamp(B, M, 2.36, 0.42);
   });
-  fixtures.sofaLamp = { pos: [wallX - 0.15, 2.3, pz], target: [wallX, 1.7, pz] };
+  fixtures.sofaLamp = { pos: [wallX - 0.15, 2.34, pz], target: [wallX, 1.65, pz] };
   // leopard on the diagonal wall
   const p = onWall(C.DIAGONAL.a, C.DIAGONAL.b, [3.2, 3.3], 0.5 * Math.hypot(C.DIAGONAL.b[0] - C.DIAGONAL.a[0], C.DIAGONAL.b[1] - C.DIAGONAL.a[1]));
   B.at(p.x, 0, p.z, p.rotY, () => {
